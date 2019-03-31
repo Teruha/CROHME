@@ -153,15 +153,26 @@ def map_ids_to_symbols():
     """
 
     """
+    ground_truth_dict = {}
     ground_truth_file = None 
     for (dirname, dirs, files) in os.walk(os.getcwd()):
-        if 'iso_GT.txt' in dirname:
-            ground_truth_file = dirname
+        if 'trainingSymbols' in dirname:
+            os.chdir(dirname)
+            for (dirname, dirs, files) in os.walk(os.getcwd()):
+                for f in files:
+                    if (f == 'iso_GT.txt'):
+                        ground_truth_file = dirname +'/'+ f
+                        break
+                if ground_truth_file != None:
+                    break
+        if ground_truth_file != None:
             break
 
     # build the ground truth to id dictionary
     with open(ground_truth_file, 'r') as f:
         for line in f:
+            ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
+    return ground_truth_dict 
 
 def build_training_data(symbol_files):
     """
@@ -179,6 +190,7 @@ def build_training_data(symbol_files):
         row = extract_features(symbol_file)
         row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
         df.loc[i] = list(row.values())
+    return df # use this to operate on the data
 
 
 def main():
