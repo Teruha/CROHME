@@ -17,7 +17,7 @@ def draw_xml_file(trace_groups):
         trace_as_string = str(trace.contents[0])
         points = []
         for i, coor in enumerate(trace_as_string.replace('\n', '').split(',')):
-            x, y = coor.split()
+            x, y = coor.split()[:2]
             x, y = int(x), -int(y)
             points.append((x, y))
         # Draw line segments between points on the plot, 
@@ -56,14 +56,15 @@ def read_input_data(file):
     None
     """
     with open(file, 'r') as f:
-
-        soup = BeautifulSoup(f, features="lxml")
+        soup = BeautifulSoup(f, features='lxml')
         # you can iterate nd get whatever tag <> is needed
-        for node in soup.find_all('annotation'):
-            print(node)
+        for node in soup.findAll('annotation')[1]:
+            print(str(node))
         
         draw_xml_file(soup.findAll("trace"))
-        extract_num_points_and_strokes(soup.findAll("trace"))
+        num_points, num_strokes = extract_num_points_and_strokes(soup.findAll("trace"))
+        print(num_points)
+        print(num_strokes)
 
         plt.show()
 
@@ -97,6 +98,7 @@ def read_training_symbol_directory():
             for (dirname, dirs, files) in os.walk(os.getcwd()):
                 for f in files:
                     training_symbol_files.append(dirname +'/'+ f)
+    training_symbol_files.sort()
     return training_symbol_files
 
 def read_training_junk_directory():
@@ -132,6 +134,7 @@ def read_training_junk_directory():
 
 def main():
     symbol_files = read_training_symbol_directory()
+    read_input_data(symbol_files[0])
     junk_files = read_training_junk_directory()
 
 
