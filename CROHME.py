@@ -3,6 +3,22 @@ import csv
 import matplotlib.pyplot as plt
 
 from bs4 import BeautifulSoup
+
+def file_sorting_helper(full_path_name):
+    """
+    Grab the iso number from the file provided
+
+    Parameters:
+    full_path_name (str) - the full directory listing of the file
+
+    Returns:
+    iso_num (int) - the number of the iso file given in the full_path_name
+    """
+    iso_name = full_path_name.split('/')[-1]
+    file_extension_idx = iso_name.index('.')
+    iso_num = int(iso_name[3:file_extension_idx])
+    return iso_num
+
 def draw_xml_file(trace_groups):
     """
     Draw the trace groups from a given XML file
@@ -63,11 +79,7 @@ def read_input_data(file):
         
         draw_xml_file(soup.findAll("trace"))
         num_points, num_strokes = extract_num_points_and_strokes(soup.findAll("trace"))
-        print(num_points)
-        print(num_strokes)
-
         plt.show()
-
 
 def read_training_symbol_directory():
     """
@@ -97,8 +109,9 @@ def read_training_symbol_directory():
             os.chdir(dirname)
             for (dirname, dirs, files) in os.walk(os.getcwd()):
                 for f in files:
-                    training_symbol_files.append(dirname +'/'+ f)
-    training_symbol_files.sort()
+                    if (f != 'iso_GT.txt'): # we want to ignore this file
+                        training_symbol_files.append(dirname +'/'+ f)
+    training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
     return training_symbol_files
 
 def read_training_junk_directory():
@@ -134,9 +147,8 @@ def read_training_junk_directory():
 
 def main():
     symbol_files = read_training_symbol_directory()
-    read_input_data(symbol_files[0])
+    read_input_data(symbol_files[4])
     junk_files = read_training_junk_directory()
-
 
 if __name__ == '__main__':
     main()
