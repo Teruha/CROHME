@@ -1,6 +1,7 @@
 import os
 import csv
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from bs4 import BeautifulSoup
 
@@ -40,6 +41,7 @@ def draw_xml_file(trace_groups):
         # to see points set the "marker" parameter to "+" or "o"
         for i in range(len(points)-1):
             plt.plot((points[i][0], points[i+1][0]), (points[i][1], points[i+1][1]), color='black')
+    plt.show()
 
 def extract_num_points_and_strokes(trace_groups):
     """
@@ -60,26 +62,28 @@ def extract_num_points_and_strokes(trace_groups):
 
     return num_points, num_strokes
 
-def read_input_data(file):
+def extract_features(file, draw_input_data=False):
     """
-    Reads a single .inkML file
-    
+    Extracts features from a single data file
 
     Parameters:
     file (string) - file name to read from current directory
 
     Returns:
-    None
+    row (dict) - dictionary mapping the features to the data for a particular sample 
     """
     with open(file, 'r') as f:
         soup = BeautifulSoup(f, features='lxml')
         # you can iterate nd get whatever tag <> is needed
+        unique_id = None
         for node in soup.findAll('annotation')[1]:
-            print(str(node))
+            unique_id = str(node)
         
-        draw_xml_file(soup.findAll("trace"))
+        if draw_input_data:
+            draw_xml_file(soup.findAll("trace"))
         num_points, num_strokes = extract_num_points_and_strokes(soup.findAll("trace"))
-        plt.show()
+
+    return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'SYMBOL_REPRESENTATION': None}
 
 def read_training_symbol_directory():
     """
@@ -145,9 +149,41 @@ def read_training_junk_directory():
                     training_junk_files.append(dirname +'/'+ f)
     return training_junk_files
 
+def map_ids_to_symbols():
+    """
+
+    """
+    ground_truth_file = None 
+    for (dirname, dirs, files) in os.walk(os.getcwd()):
+        if 'iso_GT.txt' in dirname:
+            ground_truth_file = dirname
+            break
+
+    # build the ground truth to id dictionary
+    with open(ground_truth_file, 'r') as f:
+        for line in f:
+
+def build_training_data(symbol_files):
+    """
+    Given the symbol files as input, create a dataframe from the given data
+
+    Parameters:
+    symbol_files (list) - list of symbol file names 
+
+    Returns:
+    data (Dataframe) - A pandas dataframe representation of the data
+    """
+    df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'SYMBOL_REPRESENTATION'])
+    ui_to_symbols = map_ids_to_symbols()
+    for i, symbol_file in enumerate(symbol_files):
+        row = extract_features(symbol_file)
+        row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
+        df.loc[i] = list(row.values())
+
+
 def main():
     symbol_files = read_training_symbol_directory()
-    read_input_data(symbol_files[4])
+    build_training_data(symbol_files)
     junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
