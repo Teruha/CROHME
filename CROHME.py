@@ -151,7 +151,13 @@ def read_training_junk_directory():
 
 def map_ids_to_symbols():
     """
+    Maps the unique id of each file to the symbol the file represents
 
+    Parameters:
+    None
+
+    Returns:
+    ground_truth_dict (dict {String->String}) - dictionary of the unique id strings to their written symbols 
     """
     ground_truth_dict = {}
     ground_truth_file = None 
@@ -172,9 +178,9 @@ def map_ids_to_symbols():
     with open(ground_truth_file, 'r') as f:
         for line in f:
             ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
-    return ground_truth_dict 
+    return ground_truth_dict
 
-def build_training_data(symbol_files):
+def build_training_data(symbol_files, print_progress=True):
     """
     Given the symbol files as input, create a dataframe from the given data
 
@@ -186,16 +192,21 @@ def build_training_data(symbol_files):
     """
     df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'SYMBOL_REPRESENTATION'])
     ui_to_symbols = map_ids_to_symbols()
+    num_files = len(symbol_files)
     for i, symbol_file in enumerate(symbol_files):
         row = extract_features(symbol_file)
         row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
         df.loc[i] = list(row.values())
+        if i % (num_files//100)==0 and print_progress:
+            print("{0} ({1}%) of {2} files loaded...".format(i, round((i/num_files)*100), num_files))
+    print("Files 100% loaded.")
     return df # use this to operate on the data
 
 
 def main():
     symbol_files = read_training_symbol_directory()
-    build_training_data(symbol_files)
+    df = build_training_data(symbol_files[:1000], False)
+    print(df.head(5))
     junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
