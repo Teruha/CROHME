@@ -249,7 +249,7 @@ def extract_frequencies(trace_dict):
         x_coors, y_coors = separate_x_y_coors_from_points(trace)
 
         # add each x coordinate to the x bins
-        for x in x_coor:
+        for x in x_coors:
             if (x >= intervals_x[0]) and (x < intervals_x[1]):
                 freq_x[0] += 1
             elif (x >= intervals_x[1]) and (x < intervals_x[2]):
@@ -262,7 +262,7 @@ def extract_frequencies(trace_dict):
                 freq_x[4] += 1
 
         # add each y coordinate to the y bins
-        for y in y_coor:
+        for y in y_coors:
             if (y >= intervals_y[0]) and (y < intervals_y[1]):
                 freq_y[0] += 1
             elif (y >= intervals_y[1]) and (y < intervals_y[2]):
@@ -399,7 +399,7 @@ def extract_features(file, draw_input_data=False):
         directions = extract_directions(trace_dict)
         curvature = extract_curvature(trace_dict)
         aspect_ratio = extract_aspect_ratio(trace_dict)
-        frequencies = extract_frequencies(trace_groups)
+        frequencies = extract_frequencies(trace_dict)
 
     return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'DIRECTIONS': directions, 
             'CURVATURE': curvature, 'ASPECT_RATIO': aspect_ratio, 'FREQUENCIES': frequencies, 'SYMBOL_REPRESENTATION': None}
