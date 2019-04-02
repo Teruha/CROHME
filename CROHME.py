@@ -533,11 +533,17 @@ def build_training_data(symbol_files, print_progress=True):
     print('Files 100% loaded.')
     return df # use this to operate on the data
 
-def run_random_forest_classifier(df):
-    x = df.drop(list(['SYMBOL_REPRESENTATION','UI']), axis=1)
+
+def splitData(df):
+    x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
     print(x.columns)
     y = df[list(df.columns)[-1]]
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.33, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
+
+    return x_train, x_test, y_train, y_test
+
+
+def run_random_forest_classifier(x_train, x_test, y_train, y_test):
     rfc = RandomForestClassifier(n_estimators=200)
     rfc.fit(x_train, y_train)
     rfc_pred = rfc.predict(x_test)
@@ -546,15 +552,23 @@ def run_random_forest_classifier(df):
     print('Classification Report: ')
     print(classification_report(y_test, rfc_pred))
 
+
+def run_KDtree_classifier(x_train, x_test, y_train, y_test):
+
+    pass
+
+
 def main():
     # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
 
     # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
     df = build_training_data(symbol_files[:1000], False)
-    run_random_forest_classifier(df)
+    data = splitData(df)
+    run_random_forest_classifier(data)
     # print(df)
     # junk_files = read_training_junk_directory()
+
 
 if __name__ == '__main__':
     main()
