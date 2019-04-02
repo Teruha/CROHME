@@ -5,6 +5,8 @@ import pandas as pd
 
 from bs4 import BeautifulSoup
 
+EXCLUDED_FILES = ['iso_GT.txt', 'crohme_data']
+
 def file_sorting_helper(full_path_name):
     """
     Grab the iso number from the file provided
@@ -25,7 +27,7 @@ def draw_xml_file(trace_groups):
     Draw the trace groups from a given XML file
 
     Parameters:
-    trace_groups (list) - List of trace groups
+    trace_groups (list) - list of trace groups
 
     Returns:
     None
@@ -48,7 +50,7 @@ def extract_num_points_and_strokes(trace_groups):
     Extract the total number of points and the number of strokes from a given trace_group 
 
     Parameters:
-    trace_groups (list) - List of trace groups
+    trace_groups (list) - list of trace groups
 
     Returns:
     num_points (int) - total number of points
@@ -62,6 +64,65 @@ def extract_num_points_and_strokes(trace_groups):
 
     return num_points, num_strokes
 
+def extract_directions(trace_groups):
+    """
+    Extract the directions taken to draw a specific symbol
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    directions (list) - list of the strokes a user took 
+        1 - up
+        2 - down
+        3 - left
+        4 - right
+    """
+
+def extract_curvature(trace_groups):
+    """
+    Quantify the curvature of a symbol 
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    curvature (float) - The quantified curvature of a symbol
+    """
+
+def extract_aspect_ratio(trace_groups):
+    """
+    Calculate the aspect ratio of a symbol
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    aspect_ratio (float) - aspect ratio of the trace groups
+    """
+
+def normalize_drawing(trace_groups):
+    """
+    Normalizes points between -1 and 1 in a 2D space
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    new_trace_groups (list) - list of smoothed coordinates representing the new trace_groups
+    """
+
+def smooth_points(trace_groups):
+    """
+    Smooths the points of the trace_group
+
+    Parameters:
+    trace_groups (list) - list of trace 
+
+    Returns:
+    new_trace_groups (list) - smoothed trace_group points
+    """
+    
 def extract_features(file, draw_input_data=False):
     """
     Extracts features from a single data file
@@ -80,8 +141,8 @@ def extract_features(file, draw_input_data=False):
             unique_id = str(node)
         
         if draw_input_data:
-            draw_xml_file(soup.findAll("trace"))
-        num_points, num_strokes = extract_num_points_and_strokes(soup.findAll("trace"))
+            draw_xml_file(soup.findAll('trace'))
+        num_points, num_strokes = extract_num_points_and_strokes(soup.findAll('trace'))
 
     return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'SYMBOL_REPRESENTATION': None}
 
@@ -105,7 +166,7 @@ def read_training_symbol_directory():
     None
 
     Returns:
-    training_symbol_files (list) - List of the full paths of all training files
+    training_symbol_files (list) - list of the full paths of all training files
     """
     training_symbol_files = []
     for (dirname, dirs, files) in os.walk(os.getcwd()):
@@ -113,7 +174,7 @@ def read_training_symbol_directory():
             os.chdir(dirname)
             for (dirname, dirs, files) in os.walk(os.getcwd()):
                 for f in files:
-                    if (f != 'iso_GT.txt'): # we want to ignore this file
+                    if (f not in EXCLUDED_FILES) and ('iso' in f): # we want to ignore these files
                         training_symbol_files.append(dirname +'/'+ f)
     training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
     return training_symbol_files
@@ -138,7 +199,7 @@ def read_training_junk_directory():
     None
 
     Returns:
-    training_symbol_files (list) - List of the full paths of all junk files
+    training_symbol_files (list) - list of the full paths of all junk files
     """
     training_junk_files = []
     for (dirname, dirs, files) in os.walk(os.getcwd()):
@@ -198,12 +259,14 @@ def build_training_data(symbol_files, print_progress=True):
         row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
         df.loc[i] = list(row.values())
         if i % (num_files//100)==0 and print_progress:
-            print("{0} ({1}%) of {2} files loaded...".format(i, round((i/num_files)*100), num_files))
-    print("Files 100% loaded.")
+            print('{0} ({1}%) of {2} files loaded...'.format(i, round((i/num_files)*100), num_files))
+    print('Files 100% loaded.')
     return df # use this to operate on the data
 
 
 def main():
+    # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe 
+    # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
     df = build_training_data(symbol_files[:1000], False)
     print(df.head(5))
