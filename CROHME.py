@@ -211,7 +211,6 @@ def extract_aspect_ratio(trace_dict):
         height = 0.01
     return width / height
 
-
 def extract_frequencies(trace_dict):
     """
     Extract the number of points in each of the 5 equally spaced vertical and horizontal bins.
@@ -276,7 +275,6 @@ def extract_frequencies(trace_dict):
     frequencies = [freq_x, freq_y]
     return frequencies
 
-
 # @Rachael do you think we need this?
 def normalize_drawing(trace_groups):
     """
@@ -314,7 +312,6 @@ def remove_consecutive_duplicate_points(trace_dict):
     #     print('trace_groups: {0}'.format(trace_groups))
     #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_dict
-
 
 def interpolate_spline_points(x_coors, y_coors, deg):
     """
@@ -407,7 +404,6 @@ def extract_features(file, draw_input_data=False):
             'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
             'ASPECT_RATIO': aspect_ratio, 'SYMBOL_REPRESENTATION': None}
 
-
 def read_training_symbol_directory():
     """
     This function assumes that the training data is in a folder and that folder is within the same 
@@ -444,7 +440,6 @@ def read_training_symbol_directory():
     training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
     return training_symbol_files
 
-
 def read_training_junk_directory():
     """
     This function assumes that the training data is in a folder and that folder is within the same 
@@ -475,7 +470,6 @@ def read_training_junk_directory():
                 for f in files:
                     training_junk_files.append(dirname +'/'+ f)
     return training_junk_files
-
 
 def map_ids_to_symbols():
     """
@@ -511,7 +505,6 @@ def map_ids_to_symbols():
             ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
     return ground_truth_dict
 
-
 def build_training_data(symbol_files, print_progress=True):
     """
     Given the symbol files as input, create a dataframe from the given data
@@ -537,26 +530,45 @@ def build_training_data(symbol_files, print_progress=True):
     print('Files 100% loaded.')
     return df # use this to operate on the data
 
-def run_random_forest_classifier(df):
+def split_data(df):
+    """
+    Use scikit-learn traint_test_split method to partition the data into training and testing sets
+
+    Parameters:
+    df (Dataframe) - The data to partition into different sets
+
+    Returns:
+    x_train - training set for some model
+    x_test - testing set for some model
+    y_train - training labels for some model
+    y_test - testing set for some model
+    """
+    x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+    y = df[list(df.columns)[-1]]
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
+
+    return x_train, x_test, y_train, y_test
+
+def run_random_forest_classifier(x_train, x_test, y_train, y_test):
     """
     Run the Random Forest Classifier on the processed data and output the results
 
     Parameters:
-    df (Dataframe) - Data from the files that have been interpreted and processed
+    x_train (pandas.series)  - 
+    x_test (pandas.series) -
+    y_train (pandas.series) -
+    y_test (pandas.series) -
 
     Returns:
     None
     """
-    x = df.drop(list(['SYMBOL_REPRESENTATION','UI']), axis=1)
-    y = df[list(df.columns)[-1]]
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.33, random_state=42)
-    rfc = RandomForestClassifier(n_estimators=200) # play with the maximum depth of the 
+    rfc = RandomForestClassifier(n_estimators=200)
     rfc.fit(x_train, y_train)
     rfc_pred = rfc.predict(x_test)
     
     print_top_n_predictions(rfc, x_test)
 
-    if df.size < 1000:
+    if len(x_train) < 1000:
         print('Confusion Matrix: ')
         print(confusion_matrix(y_test, rfc_pred))
     print('Classification Report: ')
@@ -577,14 +589,22 @@ def print_top_n_predictions(rfc, test_data, n=10):
     top_n = np.argsort(prediciton_probabilities)[:,:-n-1:-1]
     print(rfc.classes_[top_n])
 
+def run_KDtree_classifier(x_train, x_test, y_train, y_test):
+
+    pass
+
+
 def main():
     # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
 
     # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
-    df = build_training_data(symbol_files[:10000], False)
-    run_random_forest_classifier(df)
+
+    df = build_training_data(symbol_files[:1000], False)
+    x_train, x_test, y_train, y_test = split_data(df)
+    run_random_forest_classifier(x_train, x_test, y_train, y_test)
     # junk_files = read_training_junk_directory()
+
 
 if __name__ == '__main__':
     main()
