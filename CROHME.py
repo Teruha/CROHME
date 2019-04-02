@@ -15,7 +15,6 @@ EXCLUDED_FILES = ['iso_GT.txt', 'crohme_data']
 WINDOWS_PLATFORM = "win32"
 DEBUG = True  # TODO: SET THIS TO FALSE BEFORE SUBMISSION
 
-
 def file_sorting_helper(full_path_name):
     """
     Grab the iso number from the file provided
@@ -227,8 +226,8 @@ def extract_frequencies(trace_dict):
     # get the max and min values for x and y respectively
     max_x,min_x = -np.inf, np.inf
     max_y, min_y = -np.inf, np.inf
-    for trace in trace_dict:
-        x_coors, y_coors = separate_x_y_coors_from_points(trace)
+    for _, points in trace_dict.items():
+        x_coors, y_coors = separate_x_y_coors_from_points(points)
         max_x = np.amax(x_coors) if np.amax(x_coors) > max_x else max_x
         max_y = np.amax(y_coors) if np.amax(y_coors) > max_y else max_y
         min_x = np.amin(x_coors) if np.amin(x_coors) < min_x else min_x
@@ -245,8 +244,8 @@ def extract_frequencies(trace_dict):
     freq_x = [0, 0, 0, 0, 0]
     freq_y = [0, 0, 0, 0, 0]
 
-    for trace in trace_dict:
-        x_coors, y_coors = separate_x_y_coors_from_points(trace)
+    for _, points in trace_dict.items():
+        x_coors, y_coors = separate_x_y_coors_from_points(points)
 
         # add each x coordinate to the x bins
         for x in x_coors:
@@ -306,7 +305,7 @@ def remove_consecutive_duplicate_points(trace_dict):
         for i in range(len(points)-2):
             if points[i] != points[i+1]:
                 points_to_keep.append(points[i+1])
-        if points[0] != points[-1]:
+        if points[0] != points[-1] and points[-1] != points[-2]:
             points_to_keep.append(points[-1]) # always keep the last point
         new_trace_dict[trace_id] = points_to_keep
     
@@ -383,8 +382,8 @@ def extract_features(file, draw_input_data=False):
     """
     with open(file, 'r') as f:
         soup = bs4.BeautifulSoup(f, features='lxml')
-        # you can iterate nd get whatever tag <> is needed
         unique_id = None
+
         for node in soup.findAll('annotation')[1]:
             unique_id = str(node)
         
@@ -397,12 +396,16 @@ def extract_features(file, draw_input_data=False):
             draw_xml_file(trace_dict)
         num_points, num_strokes = extract_num_points_and_strokes(trace_dict)
         directions = extract_directions(trace_dict)
+        initial_direction = directions[0]
+        end_direction = directions[-1]
+
         curvature = extract_curvature(trace_dict)
         aspect_ratio = extract_aspect_ratio(trace_dict)
         frequencies = extract_frequencies(trace_dict)
 
-    return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'DIRECTIONS': directions, 
-            'CURVATURE': curvature, 'ASPECT_RATIO': aspect_ratio, 'FREQUENCIES': frequencies, 'SYMBOL_REPRESENTATION': None}
+    return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
+            'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
+            'ASPECT_RATIO': aspect_ratio, 'SYMBOL_REPRESENTATION': None}
 
 
 def read_training_symbol_directory():
@@ -519,8 +522,9 @@ def build_training_data(symbol_files, print_progress=True):
     Returns:
     data (Dataframe) - A pandas dataframe representation of the data
     """
-    df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'DIRECTIONS', 'CURVATURE', 'ASPECT_RATIO',
-                               'FREQUENCIES', 'SYMBOL_REPRESENTATION'])
+    df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'NUM_DIRECTIONS',
+                            'INITIAL_DIRECTION', 'END_DIRECTION', 'CURVATURE', 'ASPECT_RATIO',
+                            'SYMBOL_REPRESENTATION'])
     ui_to_symbols = map_ids_to_symbols()
     num_files = len(symbol_files)
     for i, symbol_file in enumerate(symbol_files):
@@ -534,26 +538,52 @@ def build_training_data(symbol_files, print_progress=True):
     return df # use this to operate on the data
 
 def run_random_forest_classifier(df):
+    """
+    Run the Random Forest Classifier on the processed data and output the results
+
+    Parameters:
+    df (Dataframe) - Data from the files that have been interpreted and processed
+
+    Returns:
+    None
+    """
     x = df.drop(list(['SYMBOL_REPRESENTATION','UI']), axis=1)
-    print(x.columns)
     y = df[list(df.columns)[-1]]
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.33, random_state=42)
-    rfc = RandomForestClassifier(n_estimators=200)
+    rfc = RandomForestClassifier(n_estimators=200) # play with the maximum depth of the 
     rfc.fit(x_train, y_train)
     rfc_pred = rfc.predict(x_test)
-    print('Confusion Matrix: ')
-    print(confusion_matrix(y_test, rfc_pred))
+    
+    print_top_n_predictions(rfc, x_test)
+
+    if df.size < 1000:
+        print('Confusion Matrix: ')
+        print(confusion_matrix(y_test, rfc_pred))
     print('Classification Report: ')
     print(classification_report(y_test, rfc_pred))
+
+def print_top_n_predictions(rfc, test_data, n=10):
+    """
+    Print the top n predictions of a sample based on the probability the sample belongs to each class
+
+    Parameters:
+    rfc (Sklearn.model) - Trained random forest classifier
+    test_data (Dataframe) - Subset of the training data used for testing 
+
+    Returns:
+    None
+    """
+    prediciton_probabilities = rfc.predict_proba(test_data)
+    top_n = np.argsort(prediciton_probabilities)[:,:-n-1:-1]
+    print(rfc.classes_[top_n])
 
 def main():
     # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
 
     # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
-    df = build_training_data(symbol_files[:1000], False)
+    df = build_training_data(symbol_files[:10000], False)
     run_random_forest_classifier(df)
-    # print(df)
     # junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
