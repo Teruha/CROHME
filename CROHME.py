@@ -11,7 +11,8 @@ from scipy import interpolate
 
 EXCLUDED_FILES = ['iso_GT.txt', 'crohme_data']
 WINDOWS_PLATFORM = "win32"
-DEBUG = True # TODO: SET THIS TO FALSE BEFORE SUBMISSION
+DEBUG = True  # TODO: SET THIS TO FALSE BEFORE SUBMISSION
+
 
 def file_sorting_helper(full_path_name):
     """
@@ -32,6 +33,7 @@ def file_sorting_helper(full_path_name):
     iso_num = int(iso_name[3:file_extension_idx])
     return iso_num
 
+
 def get_coordinates_from_trace(trace):
     """
     Get the coordinates from a single trace group
@@ -50,6 +52,7 @@ def get_coordinates_from_trace(trace):
         points.append((x, y))
     return points
 
+
 def separate_x_y_coors_from_trace(trace):
     """
     Return the all the x_coordinate values and all the y_coordinate values respectively from the points
@@ -65,6 +68,7 @@ def separate_x_y_coors_from_trace(trace):
     x_coors = [p[0] for p in points]
     y_coors = [p[1] for p in points]
     return x_coors, y_coors
+
 
 def draw_xml_file(trace_groups):
     """
@@ -84,6 +88,7 @@ def draw_xml_file(trace_groups):
             plt.plot((points[i][0], points[i+1][0]), (points[i][1], points[i+1][1]), color='black')
     plt.show()
 
+
 def extract_num_points_and_strokes(trace_groups):
     """
     Extract the total number of points and the number of strokes from a given trace_group 
@@ -101,6 +106,7 @@ def extract_num_points_and_strokes(trace_groups):
         num_points += len(get_coordinates_from_trace(trace))
 
     return num_points, num_strokes
+
 
 def extract_directions(trace_groups):
     """
@@ -144,6 +150,7 @@ def extract_directions(trace_groups):
         directions.extend(directions_for_trace)
     return directions
 
+
 def extract_curvature(trace_groups):
     """
     Quantify the curvature of a symbol 
@@ -179,6 +186,7 @@ def extract_curvature(trace_groups):
             character_curvature.append(np.mean(trace_curves))
     return np.mean(character_curvature)
 
+
 def extract_aspect_ratio(trace_groups):
     """
     Calculate the aspect ratio of a symbol
@@ -207,6 +215,73 @@ def extract_aspect_ratio(trace_groups):
         height = 0.01
     return width / height
 
+
+def extract_frequencies(trace_groups):
+    """
+    Extract the number of points in each of the 5 equally spaced vertical and horizontal bins.
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    frequencies (list) - [# points vertical bins, # points horizontal bins]
+    """
+
+    # get the max and min values for x and y respectively
+    max_x,min_x = -np.inf, np.inf
+    max_y, min_y = -np.inf, np.inf
+    for trace in trace_groups:
+        x_coors, y_coors = separate_x_y_coors_from_trace(trace)
+        max_x = np.amax(x_coors) if np.amax(x_coors) > max_x else max_x
+        max_y = np.amax(y_coors) if np.amax(y_coors) > max_y else max_y
+        min_x = np.amin(x_coors) if np.amin(x_coors) < min_x else min_x
+        min_y = np.amin(y_coors) if np.amin(y_coors) < min_y else min_y
+
+    # find the boundaries for each of the 5 bins
+    range_x = max_x - min_x
+    intervals_x = np.linspace(0, range_x, 6)
+    intervals_x = [value + min_x for value in intervals_x]  # must add the min_x value back to the binning values
+    range_y = max_y - min_y
+    intervals_y = np.linspace(0, range_y, 6)
+    intervals_y = [value + min_y for value in intervals_y]  # must add the min_y value back to the binning values
+
+    freq_x = [0, 0, 0, 0, 0]
+    freq_y = [0, 0, 0, 0, 0]
+
+    for trace in trace_groups:
+        x_coor, y_coor = separate_x_y_coors_from_trace(trace)
+
+        # add each x coordinate to the x bins
+        for x in x_coor:
+            if (x >= intervals_x[0]) and (x < intervals_x[1]):
+                freq_x[0] += 1
+            elif (x >= intervals_x[1]) and (x < intervals_x[2]):
+                freq_x[1] += 1
+            elif (x >= intervals_x[2]) and (x < intervals_x[3]):
+                freq_x[2] += 1
+            elif (x >= intervals_x[3]) and (x < intervals_x[4]):
+                freq_x[3] += 1
+            else:
+                freq_x[4] += 1
+
+        # add each y coordinate to the y bins
+        for y in y_coor:
+            if (y >= intervals_y[0]) and (y < intervals_y[1]):
+                freq_y[0] += 1
+            elif (y >= intervals_y[1]) and (y < intervals_y[2]):
+                freq_y[1] += 1
+            elif (y >= intervals_y[2]) and (y < intervals_y[3]):
+                freq_y[2] += 1
+            elif (y >= intervals_y[3]) and (y < intervals_y[4]):
+                freq_y[3] += 1
+            else:
+                freq_y[4] += 1
+
+    frequencies = [freq_x, freq_y]
+
+    return frequencies
+
+
 # @Rachael do you think we need this?
 def normalize_drawing(trace_groups):
     """
@@ -218,6 +293,7 @@ def normalize_drawing(trace_groups):
     Returns:
     new_trace_groups (list) - list of smoothed coordinates representing the new trace_groups
     """
+
 
 def remove_consecutive_duplicate_points(trace_groups):
     """
@@ -251,6 +327,7 @@ def remove_consecutive_duplicate_points(trace_groups):
     #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_groups
 
+
 def interpolate_spline_points(x_coors, y_coors, deg):
     """
     Fits input points to a spline equation and get coefficients.
@@ -272,6 +349,7 @@ def interpolate_spline_points(x_coors, y_coors, deg):
     #     print('interoplated_x_coors: {0}'.format(interoplated_x_coors))
     #     print('interoplated_y_coors: {0}'.format(interoplated_y_coors))
     return interoplated_x_coors, interoplated_y_coors
+
 
 def smooth_points(trace_groups):
     """
@@ -307,6 +385,7 @@ def smooth_points(trace_groups):
     #     print('trace_groups: {0}'.format(trace_groups))
     #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_groups
+
     
 def extract_features(file, draw_input_data=False):
     """
@@ -336,9 +415,11 @@ def extract_features(file, draw_input_data=False):
         directions = extract_directions(trace_groups)
         curvature = extract_curvature(trace_groups)
         aspect_ratio = extract_aspect_ratio(trace_groups)
+        frequencies = extract_frequencies(trace_groups)
 
     return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'DIRECTIONS': directions, 
-            'CURVATURE': curvature, 'ASPECT_RATIO': aspect_ratio, 'SYMBOL_REPRESENTATION': None}
+            'CURVATURE': curvature, 'ASPECT_RATIO': aspect_ratio, 'FREQUENCIES': frequencies, 'SYMBOL_REPRESENTATION': None}
+
 
 def read_training_symbol_directory():
     """
@@ -376,6 +457,7 @@ def read_training_symbol_directory():
     training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
     return training_symbol_files
 
+
 def read_training_junk_directory():
     """
     This function assumes that the training data is in a folder and that folder is within the same 
@@ -406,6 +488,7 @@ def read_training_junk_directory():
                 for f in files:
                     training_junk_files.append(dirname +'/'+ f)
     return training_junk_files
+
 
 def map_ids_to_symbols():
     """
@@ -441,6 +524,7 @@ def map_ids_to_symbols():
             ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
     return ground_truth_dict
 
+
 def build_training_data(symbol_files, print_progress=True):
     """
     Given the symbol files as input, create a dataframe from the given data
@@ -451,7 +535,8 @@ def build_training_data(symbol_files, print_progress=True):
     Returns:
     data (Dataframe) - A pandas dataframe representation of the data
     """
-    df = pd.DataFrame(columns=['UI','NUM_POINTS','NUM_STROKES','DIRECTIONS','CURVATURE','ASPECT_RATIO', 'SYMBOL_REPRESENTATION'])
+    df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'DIRECTIONS', 'CURVATURE', 'ASPECT_RATIO',
+                               'FREQUENCIES', 'SYMBOL_REPRESENTATION'])
     ui_to_symbols = map_ids_to_symbols()
     num_files = len(symbol_files)
     for i, symbol_file in enumerate(symbol_files):
@@ -466,7 +551,8 @@ def build_training_data(symbol_files, print_progress=True):
 
 
 def main():
-    # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe 
+    # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
+
     # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
     df = build_training_data(symbol_files[2:3], False)
