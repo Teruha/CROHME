@@ -3,9 +3,11 @@ import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import bs4
 
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 from sys import platform
+from scipy import interpolate
 
 EXCLUDED_FILES = ['iso_GT.txt', 'crohme_data']
 WINDOWS_PLATFORM = "win32"
@@ -96,8 +98,7 @@ def extract_num_points_and_strokes(trace_groups):
     num_points = 0
     num_strokes = len(trace_groups)
     for trace in trace_groups:
-        trace_as_string = str(trace.contents[0])
-        num_points += len(trace_as_string.replace('\n', '').split(','))
+        num_points += len(get_coordinates_from_trace(trace))
 
     return num_points, num_strokes
 
@@ -218,6 +219,60 @@ def normalize_drawing(trace_groups):
     new_trace_groups (list) - list of smoothed coordinates representing the new trace_groups
     """
 
+def remove_consecutive_duplicate_points(trace_groups):
+    """
+    Remove duplicate points from a stroke before we smooth the strokes
+
+    Parameters:
+    trace_groups (list) - list of trace groups
+
+    Returns:
+    new_trace_groups (list) - list of smoothed coordinates
+    """
+    new_trace_groups = []
+    for trace in trace_groups:
+        new_trace = bs4.element.Tag(name='trace')
+        new_trace.contents = [""]
+        points = get_coordinates_from_trace(trace)
+        points_to_keep = [points[0]]
+        for i in range(len(points)-2):
+            if points[i] != points[i+1]:
+                points_to_keep.append(points[i+1])
+        if points[0] != points[-1]:
+            points_to_keep.append(points[-1]) # always keep the last point
+        for p in points_to_keep:
+            new_trace.contents[0] += '{0} {1},'.format(p[0], p[1])
+        new_trace.contents[0] = new_trace.contents[0][:-1] # chop off last comma
+        new_trace_groups.append(new_trace)
+    
+    if DEBUG:
+        print('REMOVE_CONSECUTIVE_DUPLICATE_POINTS: ')
+        print('trace_groups: {0}'.format(trace_groups))
+        print('new_trace_groups: {0}'.format(new_trace_groups))
+    return new_trace_groups
+
+def interpolate_spline_points(x_coors, y_coors, deg):
+    """
+    Fits input points to a spline equation and get coefficients.
+    generate interpolated points and return them
+
+    Parameters:
+    x_coors (list) - list of x coordinates
+    y_coors (list) - list of y coordinates
+
+    Returns:
+    interpolated_x_coors (list) - list of points interpolated
+    interpolated_y_coors (list) - list of points interpolated
+    """
+    tupletck, _ = interpolate.splprep([x_coors,y_coors], s=5.0, k=deg)
+    steps = 1/len(x_coors)
+    num_interpolation_points = np.arange(0, 1, steps)
+    interoplated_x_coors, interoplated_y_coors = interpolate.splev(num_interpolation_points, tupletck)
+    if DEBUG:
+        print('interoplated_x_coors: {0}'.format(interoplated_x_coors))
+        print('interoplated_y_coors: {0}'.format(interoplated_y_coors))
+    return interoplated_x_coors, interoplated_y_coors
+
 def smooth_points(trace_groups):
     """
     Smooths the points of the trace_group
@@ -230,15 +285,28 @@ def smooth_points(trace_groups):
     """
     new_trace_groups = []
     for trace in trace_groups:
-        new_trace = '<trace>'
-        points = get_coordinates_from_trace(trace)
+        new_trace = bs4.element.Tag(name='trace')
+        new_trace.contents = [""]
+        x_coors, y_coors = separate_x_y_coors_from_trace(trace)
+        new_x_coors, new_y_coors = [], []
 
+        # TODO for Qadir: understand this - https://github.com/dhavalc25/Handwritten-Math-Expression-Recognition/blob/master/project1.py#L276  
+        if(len(x_coors) == 2):
+                new_x_coors, new_y_coors = interpolate_spline_points(x_coors,y_coors, deg=1)
+        if(len(x_coors) == 3):
+            new_x_coors, new_y_coors = interpolate_spline_points(x_coors,y_coors, deg=2)
+        if(len(x_coors) > 3):
+            new_x_coors, new_y_coors = interpolate_spline_points(x_coors,y_coors, deg=3)
+        for new_x, new_y in zip(new_x_coors, new_y_coors):
+            new_trace.contents[0] += '{0} {1},'.format(int(new_x), int(new_y))
 
-
-        new_trace += '<trace>'
+        new_trace.contents[0] = new_trace.contents[0][:-1] # chop off last comma
         new_trace_groups.append(new_trace)
-    
-
+    if DEBUG:
+        print('SMOOTH_POINTS: ')
+        print('trace_groups: {0}'.format(trace_groups))
+        print('new_trace_groups: {0}'.format(new_trace_groups))
+    return new_trace_groups
     
 def extract_features(file, draw_input_data=False):
     """
@@ -251,13 +319,16 @@ def extract_features(file, draw_input_data=False):
     row (dict) - dictionary mapping the features to the data for a particular sample 
     """
     with open(file, 'r') as f:
-        soup = BeautifulSoup(f, features='lxml')
+        soup = bs4.BeautifulSoup(f, features='lxml')
         # you can iterate nd get whatever tag <> is needed
         unique_id = None
         for node in soup.findAll('annotation')[1]:
             unique_id = str(node)
         
-        trace_groups = soup.findAll('trace')
+        trace_groups = soup.findAll('trace') 
+
+        # TODO: Uncomment when debugging is finished for smoothing
+        # trace_groups = smooth_points(remove_consecutive_duplicate_points(trace_groups))
 
         if draw_input_data:
             draw_xml_file(trace_groups)
