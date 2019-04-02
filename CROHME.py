@@ -139,8 +139,8 @@ def extract_directions(trace_groups):
                 # Right
                 if right not in directions_for_trace and (x_coors[i] - x_coors[i-1] > 0):
                     directions_for_trace.append(right)
-        if DEBUG:
-            print('Directions for stroke {0}: {1}'.format(trace_idx, directions_for_trace))
+        # if DEBUG:
+        #     print('Directions for stroke {0}: {1}'.format(trace_idx, directions_for_trace))
         directions.extend(directions_for_trace)
     return directions
 
@@ -241,14 +241,14 @@ def remove_consecutive_duplicate_points(trace_groups):
         if points[0] != points[-1]:
             points_to_keep.append(points[-1]) # always keep the last point
         for p in points_to_keep:
-            new_trace.contents[0] += '{0} {1},'.format(p[0], p[1])
+            new_trace.contents[0] += ' {0} {1},'.format(p[0], abs(p[1]))
         new_trace.contents[0] = new_trace.contents[0][:-1] # chop off last comma
         new_trace_groups.append(new_trace)
     
-    if DEBUG:
-        print('REMOVE_CONSECUTIVE_DUPLICATE_POINTS: ')
-        print('trace_groups: {0}'.format(trace_groups))
-        print('new_trace_groups: {0}'.format(new_trace_groups))
+    # if DEBUG:
+    #     print('REMOVE_CONSECUTIVE_DUPLICATE_POINTS: ')
+    #     print('trace_groups: {0}'.format(trace_groups))
+    #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_groups
 
 def interpolate_spline_points(x_coors, y_coors, deg):
@@ -268,9 +268,9 @@ def interpolate_spline_points(x_coors, y_coors, deg):
     steps = 1/len(x_coors)
     num_interpolation_points = np.arange(0, 1, steps)
     interoplated_x_coors, interoplated_y_coors = interpolate.splev(num_interpolation_points, tupletck)
-    if DEBUG:
-        print('interoplated_x_coors: {0}'.format(interoplated_x_coors))
-        print('interoplated_y_coors: {0}'.format(interoplated_y_coors))
+    # if DEBUG:
+    #     print('interoplated_x_coors: {0}'.format(interoplated_x_coors))
+    #     print('interoplated_y_coors: {0}'.format(interoplated_y_coors))
     return interoplated_x_coors, interoplated_y_coors
 
 def smooth_points(trace_groups):
@@ -298,14 +298,14 @@ def smooth_points(trace_groups):
         if(len(x_coors) > 3):
             new_x_coors, new_y_coors = interpolate_spline_points(x_coors,y_coors, deg=3)
         for new_x, new_y in zip(new_x_coors, new_y_coors):
-            new_trace.contents[0] += '{0} {1},'.format(int(new_x), int(new_y))
+            new_trace.contents[0] += '{0} {1},'.format(int(new_x), abs(int(new_y)))
 
         new_trace.contents[0] = new_trace.contents[0][:-1] # chop off last comma
         new_trace_groups.append(new_trace)
-    if DEBUG:
-        print('SMOOTH_POINTS: ')
-        print('trace_groups: {0}'.format(trace_groups))
-        print('new_trace_groups: {0}'.format(new_trace_groups))
+    # if DEBUG:
+    #     print('SMOOTH_POINTS: ')
+    #     print('trace_groups: {0}'.format(trace_groups))
+    #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_groups
     
 def extract_features(file, draw_input_data=False):
@@ -325,10 +325,10 @@ def extract_features(file, draw_input_data=False):
         for node in soup.findAll('annotation')[1]:
             unique_id = str(node)
         
-        trace_groups = soup.findAll('trace') 
+        # trace_groups = soup.findAll('trace') 
 
         # TODO: Uncomment when debugging is finished for smoothing
-        # trace_groups = smooth_points(remove_consecutive_duplicate_points(trace_groups))
+        trace_groups = smooth_points(remove_consecutive_duplicate_points(soup.findAll('trace')))
 
         if draw_input_data:
             draw_xml_file(trace_groups)
