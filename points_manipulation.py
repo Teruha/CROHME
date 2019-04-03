@@ -122,11 +122,6 @@ def remove_consecutive_duplicate_points(trace_dict):
         if points[0] != points[-1] and points[-1] != points[-2]:
             points_to_keep.append(points[-1]) # always keep the last point
         new_trace_dict[trace_id] = points_to_keep
-    
-    # if DEBUG:
-    #     print('REMOVE_CONSECUTIVE_DUPLICATE_POINTS: ')
-    #     print('trace_groups: {0}'.format(trace_groups))
-    #     print('new_trace_groups: {0}'.format(new_trace_groups))
     return new_trace_dict
 
 def interpolate_spline_points(x_coors, y_coors, deg):
@@ -146,9 +141,6 @@ def interpolate_spline_points(x_coors, y_coors, deg):
     steps = 1/len(x_coors)
     num_interpolation_points = np.arange(0, 1, steps)
     interoplated_x_coors, interoplated_y_coors = interpolate.splev(num_interpolation_points, tupletck)
-    # if DEBUG:
-    #     print('interoplated_x_coors: {0}'.format(interoplated_x_coors))
-    #     print('interoplated_y_coors: {0}'.format(interoplated_y_coors))
     return interoplated_x_coors, interoplated_y_coors
 
 def smooth_points(trace_dict):
@@ -177,8 +169,4 @@ def smooth_points(trace_dict):
             new_points.append((float(new_x), float(new_y)))
 
         new_trace_dict[trace_id] = new_points if len(new_points) != 0 else points
-    # if DEBUG:
-    #     print('SMOOTH_POINTS: ')
-    #     print('trace_dict: {0}'.format(trace_dict))
-    #     print('new_trace_dict: {0}'.format(new_trace_dict))
     return new_trace_dict
