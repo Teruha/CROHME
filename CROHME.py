@@ -48,12 +48,9 @@ def get_coordinates_from_trace(trace):
     points = []
     trace_as_string = str(trace.contents[0])
     for coor in trace_as_string.replace('\n', '').split(','):
-        try:
-            x, y = coor.split()[:2]
-            x, y = int(x), -int(y)
-            points.append((x, y))
-        except ValueError:
-            print("Trace as String: " + trace_as_string)
+        x, y = coor.split()[:2]
+        x, y = int(float(x)), -int(float(y))
+        points.append((x, y))
     return points
 
 def separate_x_y_coors_from_points(points):
@@ -358,7 +355,7 @@ def smooth_points(trace_dict):
         if(len(x_coors) > 3):
             new_x_coors, new_y_coors = interpolate_spline_points(x_coors ,y_coors, deg=3)
         for new_x, new_y in zip(new_x_coors, new_y_coors):
-            new_points.append((int(new_x), int(new_y)))
+            new_points.append((int(float(new_x)), int(float(new_y))))
 
         new_trace_dict[trace_id] = new_points if len(new_points) != 0 else points
     # if DEBUG:
@@ -393,6 +390,8 @@ def extract_features(file, draw_input_data=False):
             draw_xml_file(trace_dict)
         num_points, num_strokes = extract_num_points_and_strokes(trace_dict)
         directions = extract_directions(trace_dict)
+        if len(directions) == 0:
+            directions.append(0)
         initial_direction = directions[0]
         end_direction = directions[-1]
 
@@ -400,9 +399,17 @@ def extract_features(file, draw_input_data=False):
         aspect_ratio = extract_aspect_ratio(trace_dict)
         frequencies = extract_frequencies(trace_dict)
 
-    return {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
+        row = {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
             'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
-            'ASPECT_RATIO': aspect_ratio, 'SYMBOL_REPRESENTATION': None}
+            'ASPECT_RATIO': aspect_ratio}
+
+        for i, f_x in enumerate(frequencies[0]):
+            row['f_x_{0}'.format(i)] = f_x
+        for i, f_y in enumerate(frequencies[1]):
+            row['f_y_{0}'.format(i)] = f_y
+
+        row['SYMBOL_REPRESENTATION'] = None
+    return row
 
 def read_training_symbol_directory():
     """
@@ -515,14 +522,14 @@ def build_training_data(symbol_files, print_progress=True):
     Returns:
     data (Dataframe) - A pandas dataframe representation of the data
     """
-    df = pd.DataFrame(columns=['UI', 'NUM_POINTS', 'NUM_STROKES', 'NUM_DIRECTIONS',
-                            'INITIAL_DIRECTION', 'END_DIRECTION', 'CURVATURE', 'ASPECT_RATIO',
-                            'SYMBOL_REPRESENTATION'])
+    df = pd.DataFrame([])
     ui_to_symbols = map_ids_to_symbols()
     num_files = len(symbol_files)
     for i, symbol_file in enumerate(symbol_files):
         row = extract_features(symbol_file)
         row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
+        if len(df.columns) == 0:
+            df = pd.DataFrame(columns=[n for n in row.keys()])
         df.loc[i] = list(row.values())
         percentage = num_files//100
         if print_progress and percentage != 0 and i % percentage == 0:
@@ -544,7 +551,7 @@ def split_data(df):
     y_test - testing set for some model
     """
     x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
-    y = df[list(df.columns)[-1]]
+    y = df['SYMBOL_REPRESENTATION']
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
 
     return x_train, x_test, y_train, y_test
@@ -562,7 +569,7 @@ def run_random_forest_classifier(x_train, x_test, y_train, y_test):
     Returns:
     None
     """
-    rfc = RandomForestClassifier(n_estimators=200)
+    rfc = RandomForestClassifier(n_estimators=300)
     rfc.fit(x_train, y_train)
     rfc_pred = rfc.predict(x_test)
     
@@ -600,11 +607,10 @@ def main():
     # This way we won't have to read the training data everytime
     symbol_files = read_training_symbol_directory()
 
-    df = build_training_data(symbol_files[:1000], False)
+    df = build_training_data(symbol_files[10000:20000])
     x_train, x_test, y_train, y_test = split_data(df)
-    run_random_forest_classifier(x_train, x_test, y_train, y_test)
+    # run_random_forest_classifier(x_train, x_test, y_train, y_test)
     # junk_files = read_training_junk_directory()
-
 
 if __name__ == '__main__':
     main()
