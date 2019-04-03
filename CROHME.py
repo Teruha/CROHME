@@ -11,7 +11,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 
-EXCLUDED_FILES = ['iso_GT.txt', 'crohme_data']
+RFC_MODEL_FILE_NAME = 'rfc_model.pkl'
+DATA_FRAME_FILE_NAME = 'crohme_data.pkl'
+ISO_GROUND_TRUTH_FILE_NAME = 'iso_GT.txt'
+EXCLUDED_FILES = [RFC_MODEL_FILE_NAME, DATA_FRAME_FILE_NAME, ISO_GROUND_TRUTH_FILE_NAME]
 WINDOWS_PLATFORM = "win32"
 DEBUG = True  # TODO: SET THIS TO FALSE BEFORE SUBMISSION
 
@@ -49,7 +52,7 @@ def get_coordinates_from_trace(trace):
     trace_as_string = str(trace.contents[0])
     for coor in trace_as_string.replace('\n', '').split(','):
         x, y = coor.split()[:2]
-        x, y = int(float(x)), -int(float(y))
+        x, y = float(x), -float(y)
         points.append((x, y))
     return points
 
@@ -273,7 +276,7 @@ def extract_frequencies(trace_dict):
     return frequencies
 
 # @Rachael do you think we need this?
-def normalize_drawing(trace_groups):
+def normalize_drawing(trace_dict):
     """
     Normalizes points between -1 and 1 in a 2D space
 
@@ -281,8 +284,65 @@ def normalize_drawing(trace_groups):
     trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
 
     Returns:
-   new_trace_dict (dict: {int -> arr}) - normalized collection of points
+    new_trace_dict (dict: {int -> arr}) - normalized collection of points
     """
+    new_trace_dict = {}
+    for trace_id, points in trace_dict.items(): 
+        local_min_x = np.inf
+        local_max_x = -np.inf
+        local_min_y = np.inf
+        local_max_y = -np.inf
+
+        x_coors, y_coors = separate_x_y_coors_from_points(points)
+
+        if len(x_coors) == 1:
+            local_min_x = x_coors[0] - 10
+            local_max_x = x_coors[0] + 10
+            local_min_y = y_coors[0] - 20
+            local_max_y = y_coors[0] + 20
+        else:
+            local_min_x = np.amin(x_coors)
+            local_max_x = np.amax(x_coors)
+            local_min_y = np.amin(y_coors)
+            local_max_y = np.amax(y_coors)
+        
+        # Rescale the min and max depending on which direction maximum variation is
+        diff = abs((local_max_x - local_min_x) - (local_max_y - local_min_y))/2
+        if (local_max_x - local_min_x) > (local_max_y - local_min_y):
+            local_max_y = local_max_y + diff
+            local_min_y = local_min_y - diff
+        else:
+            local_max_x = local_max_x + diff
+            local_min_x = local_min_x - diff
+        new_trace_dict[trace_id] = scale_points({ trace_id: points }, local_max_x, local_min_x, local_max_y, local_min_y)
+    return new_trace_dict
+
+def scale_points(trace_dict, max_x, min_x, max_y, min_y):
+    """
+    Scale the trace points between -1 and 1
+
+    Parameters:
+    trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
+
+    Returns:
+    new_trace_dict (dict: {int -> arr}) - scaled collection of points
+    """
+    new_points = None
+    for trace_id, points in trace_dict.items(): 
+        x_coors, y_coors = separate_x_y_coors_from_points(points)
+        for i in range(len(x_coors)):
+            if max_x - min_x == 0:
+                max_x = x_coors[i] + 10
+                min_x = x_coors[i] - 10
+            if max_y - min_y == 0:
+                max_y = y_coors[i] + 20
+                min_y = y_coors[i] - 20
+            
+            x_coors[i] = ((2*(x_coors[i] - min_x))/(max_x - min_x)) - 1
+            y_coors[i] = ((2*(y_coors[i] - min_y))/(max_y - min_y)) - 1
+        
+        new_points = [(x,y) for (x,y) in zip(x_coors, y_coors)]
+    return new_points
 
 def remove_consecutive_duplicate_points(trace_dict):
     """
@@ -355,7 +415,7 @@ def smooth_points(trace_dict):
         if(len(x_coors) > 3):
             new_x_coors, new_y_coors = interpolate_spline_points(x_coors ,y_coors, deg=3)
         for new_x, new_y in zip(new_x_coors, new_y_coors):
-            new_points.append((int(float(new_x)), int(float(new_y))))
+            new_points.append((float(new_x), float(new_y)))
 
         new_trace_dict[trace_id] = new_points if len(new_points) != 0 else points
     # if DEBUG:
@@ -363,7 +423,7 @@ def smooth_points(trace_dict):
     #     print('trace_dict: {0}'.format(trace_dict))
     #     print('new_trace_dict: {0}'.format(new_trace_dict))
     return new_trace_dict
-    
+
 def extract_features(file, draw_input_data=False):
     """
     Extracts features from a single data file
@@ -384,7 +444,8 @@ def extract_features(file, draw_input_data=False):
         trace_dict = {}
         for i, trace in enumerate(soup.findAll('trace')):
             trace_dict[i] = get_coordinates_from_trace(trace)
-        trace_dict = smooth_points(remove_consecutive_duplicate_points(trace_dict))
+        # trace_dict = smooth_points(remove_consecutive_duplicate_points(trace_dict))
+        trace_dict = normalize_drawing(smooth_points(remove_consecutive_duplicate_points(trace_dict)))
 
         if draw_input_data:
             draw_xml_file(trace_dict)
@@ -444,6 +505,7 @@ def read_training_symbol_directory():
                             training_symbol_files.append(dirname +'\\'+ f)
                         else:
                             training_symbol_files.append(dirname +'/'+ f)
+    os.chdir('..')
     training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
     return training_symbol_files
 
@@ -469,13 +531,20 @@ def read_training_junk_directory():
     Returns:
     training_symbol_files (list) - list of the full paths of all junk files
     """
+    if (f not in EXCLUDED_FILES) and ('junk' in f): # we want to ignore these files
+                        
     training_junk_files = []
     for (dirname, dirs, files) in os.walk(os.getcwd()):
         if 'trainingJunk' in dirname:
             os.chdir(dirname)
             for (dirname, dirs, files) in os.walk(os.getcwd()):
                 for f in files:
-                    training_junk_files.append(dirname +'/'+ f)
+                    if (f not in EXCLUDED_FILES) and ('junk' in f):
+                        if platform == WINDOWS_PLATFORM:
+                            training_junk_files.append(dirname +'\\'+ f)
+                        else:
+                            training_junk_files.append(dirname +'/'+ f)
+    os.chdir('..')
     return training_junk_files
 
 def map_ids_to_symbols():
@@ -495,7 +564,7 @@ def map_ids_to_symbols():
             os.chdir(dirname)
             for (dirname, dirs, files) in os.walk(os.getcwd()):
                 for f in files:
-                    if (f == 'iso_GT.txt'):
+                    if (f == ISO_GROUND_TRUTH_FILE_NAME):
                         if platform == WINDOWS_PLATFORM:
                             ground_truth_file = dirname +'\\'+ f
                         else:
@@ -603,13 +672,13 @@ def run_KDtree_classifier(x_train, x_test, y_train, y_test):
 
 def main():
     # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
-
     # This way we won't have to read the training data everytime
+    print(os.getcwd())
     symbol_files = read_training_symbol_directory()
-
-    df = build_training_data(symbol_files[10000:20000])
+    print(os.getcwd())
+    df = build_training_data(symbol_files)
     x_train, x_test, y_train, y_test = split_data(df)
-    # run_random_forest_classifier(x_train, x_test, y_train, y_test)
+    run_random_forest_classifier(x_train, x_test, y_train, y_test)
     # junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
