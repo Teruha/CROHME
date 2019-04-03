@@ -8,6 +8,7 @@ import bs4
 from sys import platform
 from scipy import interpolate
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -650,7 +651,23 @@ def run_random_forest_classifier(x_train, x_test, y_train, y_test):
     print('Classification Report: ')
     print(classification_report(y_test, rfc_pred))
 
-def print_top_n_predictions(rfc, test_data, n=10):
+    
+def run_KDtree_classifier(x_train, x_test, y_train, y_test):
+
+    kdc = KNeighborsClassifier(n_neighbors=1, algorithm='kd_tree', metric='euclidean')
+    kdc.fit(x_train, y_train)
+    kdc_pred = kdc.predict(x_test)
+
+    print_top_n_predictions(kdc, x_test)
+
+    if len(x_train) < 1000:
+        print('Confusion Matrix: ')
+        print(confusion_matrix(y_test, kdc_pred))
+    print('Classification Report: ')
+    print(classification_report(y_test, kdc_pred))
+
+
+def print_top_n_predictions(model, test_data, n=10):
     """
     Print the top n predictions of a sample based on the probability the sample belongs to each class
 
@@ -661,13 +678,9 @@ def print_top_n_predictions(rfc, test_data, n=10):
     Returns:
     None
     """
-    prediciton_probabilities = rfc.predict_proba(test_data)
+    prediciton_probabilities = model.predict_proba(test_data)
     top_n = np.argsort(prediciton_probabilities)[:,:-n-1:-1]
-    print(rfc.classes_[top_n])
-
-def run_KDtree_classifier(x_train, x_test, y_train, y_test):
-
-    pass
+    print(model.classes_[top_n])
 
 
 def main():
@@ -679,6 +692,7 @@ def main():
     df = build_training_data(symbol_files)
     x_train, x_test, y_train, y_test = split_data(df)
     run_random_forest_classifier(x_train, x_test, y_train, y_test)
+    run_KDtree_classifier(x_train, x_test, y_train, y_test)
     # junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
