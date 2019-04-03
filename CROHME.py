@@ -104,12 +104,12 @@ def main():
     except FileNotFoundError:
         symbol_files = read_training_symbol_directory()
         junk_files = read_training_junk_directory()
-        df = build_training_data(symbol_files, []) # TODO: Replace empty array with junk files when ready to test both
+        df = build_training_data(symbol_files, junk_files) # TODO: Replace empty array with junk files when ready to test both
         os.chdir('../..')
         df.to_pickle(CONST.DATA_FRAME_FILE_NAME)
     
     x_train, x_test, y_train, y_test = split_data(df)
-    run_random_forest_classifier(x_train, x_test, y_train, y_test, 100, CONST.RFC_IMPURITY_CRITERION[0])
+    run_random_forest_classifier(x_train, x_test, y_train, y_test, 200, CONST.RFC_IMPURITY_CRITERION[0])
     run_KDtree_classifier(x_train, x_test, y_train, y_test)
 
 if __name__ == '__main__':

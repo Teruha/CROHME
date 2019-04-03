@@ -34,12 +34,12 @@ def build_training_data(symbol_files, junk_files, print_progress=True):
     """
     df = pd.DataFrame([]) # contains both junk and symbol files
     ui_to_symbols = map_ids_to_symbols()
-    num_files = len(symbol_files)
     all_files = symbol_files[:]
     all_files.extend(junk_files)
+    num_files = len(all_files)
     for i, data_file in enumerate(all_files):
         row = extract_features(data_file)
-        row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
+        row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']] if row['UI'] in ui_to_symbols else 'junk'
         if len(df.columns) == 0:
             df = pd.DataFrame(columns=[n for n in row.keys()])
         df.loc[i] = list(row.values())
