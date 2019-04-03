@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import bs4
+import _pickle as cPickle
 
 from sys import platform
 from scipy import interpolate
@@ -13,9 +14,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 
 RFC_MODEL_FILE_NAME = 'rfc_model.pkl'
+KD_TREE_MODEL_NAME = 'kd_tree_model.pkl'
 DATA_FRAME_FILE_NAME = 'crohme_data.pkl'
+SYMBOL_DATA_ONLY_FILE_NAME = 'symbol_data.pkl'
+JUNK_DATA_ONLY_FILE = 'junk_data.pkl'
 ISO_GROUND_TRUTH_FILE_NAME = 'iso_GT.txt'
-EXCLUDED_FILES = [RFC_MODEL_FILE_NAME, DATA_FRAME_FILE_NAME, ISO_GROUND_TRUTH_FILE_NAME]
+EXCLUDED_FILES = [RFC_MODEL_FILE_NAME, DATA_FRAME_FILE_NAME, ISO_GROUND_TRUTH_FILE_NAME, KD_TREE_MODEL_NAME, \
+    JUNK_DATA_ONLY_FILE, SYMBOL_DATA_ONLY_FILE_NAME]
 WINDOWS_PLATFORM = "win32"
 DEBUG = True  # TODO: SET THIS TO FALSE BEFORE SUBMISSION
 
@@ -532,8 +537,6 @@ def read_training_junk_directory():
     Returns:
     training_symbol_files (list) - list of the full paths of all junk files
     """
-    if (f not in EXCLUDED_FILES) and ('junk' in f): # we want to ignore these files
-                        
     training_junk_files = []
     for (dirname, dirs, files) in os.walk(os.getcwd()):
         if 'trainingJunk' in dirname:
@@ -582,7 +585,7 @@ def map_ids_to_symbols():
             ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
     return ground_truth_dict
 
-def build_training_data(symbol_files, print_progress=True):
+def build_training_data(symbol_files, junk_files, print_progress=True):
     """
     Given the symbol files as input, create a dataframe from the given data
 
@@ -592,11 +595,13 @@ def build_training_data(symbol_files, print_progress=True):
     Returns:
     data (Dataframe) - A pandas dataframe representation of the data
     """
-    df = pd.DataFrame([])
+    df = pd.DataFrame([]) # contains both junk and symbol files
     ui_to_symbols = map_ids_to_symbols()
     num_files = len(symbol_files)
-    for i, symbol_file in enumerate(symbol_files):
-        row = extract_features(symbol_file)
+    all_files = symbol_files[:]
+    all_files.extend(junk_files)
+    for i, data_file in enumerate(all_files):
+        row = extract_features(data_file)
         row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
         if len(df.columns) == 0:
             df = pd.DataFrame(columns=[n for n in row.keys()])
@@ -628,23 +633,32 @@ def split_data(df):
 
 def run_random_forest_classifier(x_train, x_test, y_train, y_test):
     """
-    Run the Random Forest Classifier on the processed data and output the results
+    Run the Random Forest Classifier on the processed data and output the results.
+    NOTE: This function creates a new pickle file if no such file exists or reads an existing one
 
     Parameters:
-    x_train (pandas.series)  - 
-    x_test (pandas.series) -
-    y_train (pandas.series) -
-    y_test (pandas.series) -
+    x_train (pandas.series) - Training samples building the model
+    x_test (pandas.series) - Testing samples 
+    y_train (pandas.series) - Training samples building the model
+    y_test (pandas.series) - Testing samples
 
     Returns:
     None
     """
-    rfc = RandomForestClassifier(n_estimators=300)
-    rfc.fit(x_train, y_train)
+    rfc = None
+    try:
+        with open(RFC_MODEL_FILE_NAME, 'rb') as f: 
+            rfc = cPickle.load(f)
+    except FileNotFoundError:
+        rfc = RandomForestClassifier(n_estimators=300)
+        rfc.fit(x_train, y_train)
+        with open(RFC_MODEL_FILE_NAME, 'wb') as f:
+            cPickle.dump(rfc, f)
+
     rfc_pred = rfc.predict(x_test)
-    
     print_top_n_predictions(rfc, x_test)
 
+    print('Random Forest Classifier results:')
     if len(x_train) < 1000:
         print('Confusion Matrix: ')
         print(confusion_matrix(y_test, rfc_pred))
@@ -653,13 +667,33 @@ def run_random_forest_classifier(x_train, x_test, y_train, y_test):
 
     
 def run_KDtree_classifier(x_train, x_test, y_train, y_test):
+    """
+    Run the KD Tree Classifier on the processed data and output the results.
+    NOTE: This function creates a new pickle file if no such file exists or reads an existing one
 
-    kdc = KNeighborsClassifier(n_neighbors=1, algorithm='kd_tree', metric='euclidean')
-    kdc.fit(x_train, y_train)
+    Parameters:
+    x_train (pandas.series) - Training samples building the model
+    x_test (pandas.series) - Testing samples 
+    y_train (pandas.series) - Training samples building the model
+    y_test (pandas.series) - Testing samples
+
+    Returns:
+    None
+    """
+    kdc = None
+    try: 
+        with open(KD_TREE_MODEL_NAME, 'rb') as f: 
+            kdc = cPickle.load(f)
+    except FileNotFoundError:
+        kdc = KNeighborsClassifier(n_neighbors=1, algorithm='kd_tree', metric='euclidean')
+        kdc.fit(x_train, y_train)
+        with open(KD_TREE_MODEL_NAME, 'wb') as f:
+            cPickle.dump(kdc, f)
+    
     kdc_pred = kdc.predict(x_test)
-
     print_top_n_predictions(kdc, x_test)
 
+    print('KDTree Classifier results:')
     if len(x_train) < 1000:
         print('Confusion Matrix: ')
         print(confusion_matrix(y_test, kdc_pred))
@@ -684,16 +718,18 @@ def print_top_n_predictions(model, test_data, n=10):
 
 
 def main():
-    # TODO: Add df.to_pickle and df.read_pickle for saving and reading dataframe
-    # This way we won't have to read the training data everytime
-    print(os.getcwd())
-    symbol_files = read_training_symbol_directory()
-    print(os.getcwd())
-    df = build_training_data(symbol_files)
+    try:
+        df = pd.read_pickle(DATA_FRAME_FILE_NAME)
+    except FileNotFoundError:
+        symbol_files = read_training_symbol_directory()
+        junk_files = read_training_junk_directory()
+        df = build_training_data(symbol_files, []) # TODO: Replace empty array with junk files when ready to test both
+        os.chdir('../..')
+        df.to_pickle(DATA_FRAME_FILE_NAME)
+    
     x_train, x_test, y_train, y_test = split_data(df)
     run_random_forest_classifier(x_train, x_test, y_train, y_test)
     run_KDtree_classifier(x_train, x_test, y_train, y_test)
-    # junk_files = read_training_junk_directory()
 
 if __name__ == '__main__':
     main()
