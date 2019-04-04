@@ -16,10 +16,11 @@ def split_data(df):
     y_train - training labels for some model
     y_test - testing set for some model
     """
-    x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+    # x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+    x = df
     y = df['SYMBOL_REPRESENTATION']
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
-
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.30, random_state=42)
+    
     return x_train, x_test, y_train, y_test
 
 def build_training_data(symbol_files, junk_files, print_progress=True):

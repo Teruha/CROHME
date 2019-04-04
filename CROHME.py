@@ -37,15 +37,20 @@ def run_random_forest_classifier(x_train, x_test, y_train, y_test, n_estimators=
         with open(file_name, 'wb') as f:
             dump(rfc, f, compress=True)
 
-    rfc_pred = rfc.predict(x_test)
-    print_top_n_predictions(rfc, x_test)
-
-    print('Random Forest Classifier results:')
-    if len(x_train) < 1000:
-        print('Confusion Matrix: ')
-        print(confusion_matrix(y_test, rfc_pred))
-    print('Classification Report: ')
-    print(classification_report(y_test, rfc_pred))
+    if len(x_test) != 0:
+        dropped_x_test = x_test.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+        rfc_pred = rfc.predict(dropped_x_test)
+        print_top_n_predictions(rfc, dropped_x_test, 10, True, x_test)
+        with open(CONST.PREDICTION_GROUND_TRUTH_CSV, 'w+') as f:
+            for _, row in x_test.iterrows():
+                f.write('{0},{1}\n'.format(row['UI'], row['SYMBOL_REPRESENTATION']))
+        
+        print('Random Forest Classifier results:')
+        if len(x_train) < 1000:
+            print('Confusion Matrix: ')
+            print(confusion_matrix(y_test, rfc_pred))
+        print('Classification Report: ')
+        print(classification_report(y_test, rfc_pred))
 
     
 def run_KDtree_classifier(x_train, x_test, y_train, y_test):
@@ -73,17 +78,18 @@ def run_KDtree_classifier(x_train, x_test, y_train, y_test):
         with open(CONST.KD_TREE_MODEL_NAME, 'wb') as f:
             dump(kdc, f,compress=True)
     
-    kdc_pred = kdc.predict(x_test)
-    print_top_n_predictions(kdc, x_test)
+    if len(x_test) != 0:
+        dropped_x_test = x_test.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+        kdc_pred = kdc.predict(dropped_x_test)
+        print_top_n_predictions(kdc, dropped_x_test, 10, False, x_test)
+        print('KDTree Classifier results:')
+        if len(x_train) < 1000:
+            print('Confusion Matrix: ')
+            print(confusion_matrix(y_test, kdc_pred))
+        print('Classification Report: ')
+        print(classification_report(y_test, kdc_pred))
 
-    print('KDTree Classifier results:')
-    if len(x_train) < 1000:
-        print('Confusion Matrix: ')
-        print(confusion_matrix(y_test, kdc_pred))
-    print('Classification Report: ')
-    print(classification_report(y_test, kdc_pred))
-
-def print_top_n_predictions(model, test_data, n=10):
+def print_top_n_predictions(model, test_data, n=10, is_rfc=False, x_test=None):
     """
     Print the top n predictions of a sample based on the probability the sample belongs to each class
 
@@ -96,17 +102,33 @@ def print_top_n_predictions(model, test_data, n=10):
     """
     prediciton_probabilities = model.predict_proba(test_data)
     top_n = np.argsort(prediciton_probabilities)[:,:-n-1:-1]
-    print(model.classes_[top_n])
+
+    if is_rfc:
+        with open(CONST.RFC_RECOGNITION_RESULTS_CSV, 'w+') as f:
+            unique_identifiers = x_test['UI']
+            for u, guess in zip(unique_identifiers, model.classes_[top_n]):
+                preds = ','.join(guess)
+                f.write('{0},{1}\n'.format(u, preds))
+    else:
+        with open(CONST.KD_TREE_RECOGNITION_RESULTS_CSV, 'w+') as f:
+            unique_identifiers = x_test['UI']
+            for u, guess in zip(unique_identifiers, model.classes_[top_n]):
+                preds = ','.join(guess)
+                f.write('{0},{1}\n'.format(u, preds))
+
+    # print(model.classes_[top_n])
 
 def main():
+    data_file_to_load = CONST.DATA_FRAME_FILE_NAME
     try:
-        df = pd.read_pickle(CONST.DATA_FRAME_FILE_NAME)
+        df = pd.read_pickle(data_file_to_load)
+        print('Loaded ' + data_file_to_load + ' from memory.')
     except FileNotFoundError:
         symbol_files = read_training_symbol_directory()
         junk_files = read_training_junk_directory()
         df = build_training_data(symbol_files, junk_files) # TODO: Replace empty array with junk files when ready to test both
         os.chdir('../..')
-        df.to_pickle(CONST.DATA_FRAME_FILE_NAME)
+        df.to_pickle(data_file_to_load)
     
     x_train, x_test, y_train, y_test = split_data(df)
     run_random_forest_classifier(x_train, x_test, y_train, y_test, 200, CONST.RFC_IMPURITY_CRITERION[0])
