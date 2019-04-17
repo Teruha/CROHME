@@ -1,0 +1,19 @@
+# IUD, 2011_IVC_depart_F006_E001
+# Objects(8):
+O, \theta_1, \theta, 1.0, 5
+O, d_1, d, 1.0, 10
+O, \pm_1, \pm, 1.0, 8, 7, 9
+O, r_1, r, 1.0, 0
+O, \alpha_1, \alpha, 1.0, 3
+O, =_1, =, 1.0, 2, 1
+O, (_1, (, 1.0, 4
+O, )_1, ), 1.0, 6
+
+# Relations from SRT:
+R, (_1, \theta_1, Right, 1.0
+R, )_1, \pm_1, Right, 1.0
+R, =_1, \alpha_1, Right, 1.0
+R, \alpha_1, (_1, Right, 1.0
+R, \pm_1, d_1, Right, 1.0
+R, \theta_1, )_1, Right, 1.0
+R, r_1, =_1, Right, 1.0

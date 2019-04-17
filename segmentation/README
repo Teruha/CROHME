@@ -1,0 +1,35 @@
+README
+Pattern Recognition, Spring 2019
+CROHME formula training set (modified 2014/2016 train set)
+R. Zanibbi
+--------------------------------------------------------------------------
+
+This is a modified version of the CROHME 2014/2016 training set formulas.
+There are three versions of ground truth here:
+
+	1. inkml/ - contains all stroke + MathML data in CROHME InkML format
+	2. lg/ - contains stroke segments (symbols) and symbols labels + 
+	         Symbol Layout Tree (or 'SRT') edges.
+	3. lg_norel/ - **for Project 2,** this version of .lg ground truth
+			 contains only the symbol data (relations are removed).
+
+For Project 2, you will need to read stroke data from the inkml files 
+(e.g., using BeautifulSoup), and then produce .lg output. For evaluation
+and training, you should use the .lg files in the lg_norel directory, to
+avoid confusing metrics.
+
+For Project 3, you will want to use the .lg files in the lg/ directory, 
+which contain both symbol and spatial relationship information.
+
+NOTE:
+
+Make sure to have a look at the README for LgEval and CROHMELib (but 
+especially LgEval) to get a summary of the tools available.
+
+NOTE 2:
+
+Apparently one .inkml file was empty; I have left this (along with the
+warning message in this directory) so that the data set remains the same
+as that used in the published competition results.
+
+

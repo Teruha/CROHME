@@ -1,0 +1,41 @@
+# IUD, 92_david
+# Objects(19):
+O, (_1, (, 1.0, 19
+O, theta_1, \theta, 1.0, 9, 10
+O, )_1, ), 1.0, 26
+O, prime_1, \prime, 1.0, 4
+O, sin_1, \sin, 1.0, 8, 6, 7, 5
+O, prime_3, \prime, 1.0, 21
+O, w_2, w, 1.0, 32
+O, x_1, x, 1.0, 3
+O, prime_2, \prime, 1.0, 14
+O, w_1, w, 1.0, 20
+O, _1, -, 1.0, 27
+O, y_2, y, 1.0, 13
+O, +_1, +, 1.0, 11, 12
+O, y_1, y, 1.0, 0
+O, =_1, =, 1.0, 1, 2
+O, sin_2, \sin, 1.0, 18, 16, 17, 15
+O, sin_3, \sin, 1.0, 31, 29, 30, 28
+O, theta_2, \theta, 1.0, 24, 25
+O, +_2, +, 1.0, 22, 23
+
+# Relations from SRT:
+R, (_1, w_1, Right, 1.0
+R, +_1, y_2, Right, 1.0
+R, +_2, theta_2, Right, 1.0
+R, =_1, _1, Right, 1.0
+R, _1, sin_3, Below, 1.0
+R, _1, x_1, Above, 1.0
+R, prime_1, sin_1, Right, 1.0
+R, prime_2, sin_2, Right, 1.0
+R, prime_3, +_2, Right, 1.0
+R, sin_1, theta_1, Right, 1.0
+R, sin_2, (_1, Right, 1.0
+R, sin_3, w_2, Right, 1.0
+R, theta_1, +_1, Right, 1.0
+R, theta_2, )_1, Right, 1.0
+R, w_1, prime_3, Right, 1.0
+R, x_1, prime_1, Right, 1.0
+R, y_1, =_1, Right, 1.0
+R, y_2, prime_2, Right, 1.0

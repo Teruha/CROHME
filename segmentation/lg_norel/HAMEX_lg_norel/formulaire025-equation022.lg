@@ -1,0 +1,13 @@
+# IUD, 2011_IVC_depart_F025_E022
+# Objects(10):
+O, u_1, u, 1.0, 4
+O, \rightarrow_1, \rightarrow, 1.0, 7, 8
+O, n_2, n, 1.0, 5
+O, \infty_2, \infty, 1.0, 15
+O, -_1, -, 1.0, 14
+O, +_1, +, 1.0, 9, 10
+O, =_1, =, 1.0, 13, 12
+O, n_1, n, 1.0, 6
+O, \lim_1, \lim, 1.0, 0, 1, 2, 3
+O, \infty_1, \infty, 1.0, 11
+

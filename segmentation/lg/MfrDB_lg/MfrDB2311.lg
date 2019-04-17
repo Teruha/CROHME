@@ -1,0 +1,13 @@
+# IUD, MfrDB2311
+# Objects(5):
+O, x_1, x, 1.0, 0, 1
+O, +_1, +, 1.0, 2, 3
+O, =_1, =, 1.0, 6, 7
+O, z_1, z, 1.0, 8, 9
+O, y_1, y, 1.0, 4, 5
+
+# Relations from SRT:
+R, +_1, y_1, Right, 1.0
+R, =_1, z_1, Right, 1.0
+R, x_1, +_1, Right, 1.0
+R, y_1, =_1, Right, 1.0

@@ -1,0 +1,30 @@
+# IUD, 2011_IVC_depart_F016_E039
+# Objects(27):
+O, COMMA_1, COMMA, 1.0, 24
+O, AUTO_6, s, 1.0, 6
+O, AUTO_7, COMMA, 1.0, 7
+O, s_1, s, 1.0, 17
+O, AUTO_13, (, 1.0, 13, 14, 15
+O, s_3, s, 1.0, 31
+O, =_1, =, 1.0, 18, 19
+O, )_1, ), 1.0, 33
+O, s_2, s, 1.0, 22
+O, AUTO_3, f, 1.0, 3
+O, AUTO_1, COMMA, 1.0, 1
+O, AUTO_14, f, 1.0, 16
+O, AUTO_4, (, 1.0, 4
+O, AUTO_8, 1, 1.0, 8
+O, (_1, (, 1.0, 21
+O, 1_1, 1, 1.0, 23
+O, \ldots_1, \ldots, 1.0, 25, 26, 27, 28, 29
+O, AUTO_12, COMMA, 1.0, 12
+O, n_1, n, 1.0, 32
+O, AUTO_9, 1, 1.0, 9
+O, AUTO_11, 1, 1.0, 11
+O, AUTO_0, s, 1.0, 0
+O, AUTO_2, COMMA, 1.0, 2
+O, AUTO_10, 1, 1.0, 10
+O, AUTO_5, s, 1.0, 5
+O, COMMA_2, COMMA, 1.0, 30
+O, f_1, f, 1.0, 20
+
