@@ -1,42 +1,6 @@
+
 import numpy as np
-
-# TODO: reused from project 1... should probably place in separate file again.
-def get_coordinates_from_trace(trace):
-    """
-    Get the coordinates from a single trace group
-
-    Parameters:
-    trace (string) - string of the coordinates separated by commas
-
-    Returns:
-    points (list) - a list of tuples that represents the x,y coordinates
-    """
-    points = []
-    trace_as_string = str(trace.contents[0])
-    for coor in trace_as_string.replace('\n', '').split(','):
-        x, y = coor.split()[:2]
-        x, y = float(x), -float(y)
-        points.append((x, y))
-    return points
-
-
-def separate_x_y_coors_from_points(points):
-    """
-    Return the all the x_coordinate values and all the y_coordinate values respectively from the points
-
-    Parameters:
-    points (list) - list of tuples representing the (x,y) coordinates
-
-    Returns:
-    x_coors (list) - list of ints representing the x coordinate of their corresponding point
-    y_coors (list) - list of ints representing the y coordinate of their corresponding point
-    """
-    x_coors = [p[0] for p in points]
-    y_coors = [p[1] for p in points]
-
-    return x_coors, y_coors
-
-################################
+from classification.points_manipulation import separate_x_y_coors_from_points
 
 
 def determine_intersecting_segments(trace_group):
@@ -115,8 +79,31 @@ def bounding_box(trace_points):
     return bb
 
 
+# TODO: create functions for overlap x and overlap y
+def bounding_box_overlap(trace_points_1, trace_points_2):
+    """
+    Obtain the minimum and maximum x, y coordinates that define the bounding box for a single trace.
+
+    Parameters:
+    trace_points_1 (list) - list of tuples representing x, y coordinates
+    trace_points_2 (list) - list of tuples representing x, y coordinates
+
+    Returns:
+    overlap (boolean) - True if overlap, False if no overlap
+    """
+
+    bb1 = bounding_box(trace_points_1)  # min_x, max_x, min_y, max_y
+    bb2 = bounding_box(trace_points_2)
+
+    # (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x) and (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x)
+    overlap = (bb1[0] < bb2[1]) and (bb2[0] < bb1[1]) and \
+              (bb1[2] < bb2[3]) and (bb2[2] < bb1[3])
+
+    return overlap
+
+
 # TODO: may want to consider interpolating more points to get a more accurate density histogram.
-def densityHistogram(trace_dict):
+def density_histogram(trace_dict):
 
     """
     Extract the number of points in each of the equally spaced vertical bins. This will hopefully give us some
