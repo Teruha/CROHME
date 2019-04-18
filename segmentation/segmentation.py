@@ -91,6 +91,30 @@ def do_lines_intersect(p1, p2, q1, q2):
     return False
 
 
+def bounding_box(trace_points):
+    """
+    Obtain the minimum and maximum x, y coordinates that define the bounding box for a single trace.
+
+    Parameters:
+    trace_points (list) - list of tuples representing x, y coordinates
+
+    Returns:
+    bb (list) - [minimum x value, maximum x value, minimum y value, maximum y value;]
+    """
+
+    x_coors, y_coors = separate_x_y_coors_from_points(trace_points)
+
+    # get the max and min values for all x and y
+    min_x = np.amin(x_coors)
+    max_x = np.amax(x_coors)
+    min_y = np.amin(y_coors)
+    max_y = np.amax(y_coors)
+
+    bb = [min_x, max_x, min_y, max_y]
+
+    return bb
+
+
 # TODO: may want to consider interpolating more points to get a more accurate density histogram.
 def densityHistogram(trace_dict):
 
@@ -102,7 +126,7 @@ def densityHistogram(trace_dict):
     trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
 
     Returns:
-    frequencies (list) - [# points vertical bins, # points horizontal bins]
+    frequencies (list) - [# points vertical bin]
     """
 
     num_bins = 10
