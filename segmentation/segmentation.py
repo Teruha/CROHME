@@ -82,7 +82,7 @@ def bounding_box(trace_points):
 # TODO: create functions for overlap x and overlap y
 def bounding_box_overlap(trace_points_1, trace_points_2):
     """
-    Obtain the minimum and maximum x, y coordinates that define the bounding box for a single trace.
+    Determine if two bounding boxes overlap in a 2 dimensional space.
 
     Parameters:
     trace_points_1 (list) - list of tuples representing x, y coordinates
@@ -95,9 +95,51 @@ def bounding_box_overlap(trace_points_1, trace_points_2):
     bb1 = bounding_box(trace_points_1)  # min_x, max_x, min_y, max_y
     bb2 = bounding_box(trace_points_2)
 
-    # (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x) and (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x)
+    # (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x) and (bb1_min_y < bb2_max_y) and (bb2_min_y < bb1_max_y)
     overlap = (bb1[0] < bb2[1]) and (bb2[0] < bb1[1]) and \
               (bb1[2] < bb2[3]) and (bb2[2] < bb1[3])
+
+    return overlap
+
+
+def bounding_box_overlap_xdir(trace_points_1, trace_points_2):
+    """
+    Determine if two boxes overlap after being projected into a 1 dimensional space. Namely the x-axis.
+
+    Parameters:
+    trace_points_1 (list) - list of tuples representing x, y coordinates
+    trace_points_2 (list) - list of tuples representing x, y coordinates
+
+    Returns:
+    overlap (boolean) - True if overlap, False if no overlap
+    """
+
+    bb1 = bounding_box(trace_points_1)  # min_x, max_x, min_y, max_y
+    bb2 = bounding_box(trace_points_2)
+
+    # (bb1_min_x < bb2_max_x) and (bb2_min_x < bb1_max_x)
+    overlap = (bb1[0] < bb2[1]) and (bb2[0] < bb1[1])
+
+    return overlap
+
+
+def bounding_box_overlap_ydir(trace_points_1, trace_points_2):
+    """
+    Determine if two boxes overlap after being projected into a 1 dimensional space. Namely the y-axis.
+
+    Parameters:
+    trace_points_1 (list) - list of tuples representing x, y coordinates
+    trace_points_2 (list) - list of tuples representing x, y coordinates
+
+    Returns:
+    overlap (boolean) - True if overlap, False if no overlap
+    """
+
+    bb1 = bounding_box(trace_points_1)  # min_x, max_x, min_y, max_y
+    bb2 = bounding_box(trace_points_2)
+
+    # (bb1_min_y < bb2_max_y) and (bb2_min_y < bb1_max_y)
+    overlap = (bb1[2] < bb2[3]) and (bb2[2] < bb1[3])
 
     return overlap
 
