@@ -208,7 +208,6 @@ def extract_features(file, draw_input_data=False):
         for node in soup.findAll('annotation')[1]:
             unique_id = str(node)
 
-        
         trace_dict = {}
         for trace in soup.findAll('trace'):
             trace_dict[trace['id']] = get_coordinates_from_trace(trace)

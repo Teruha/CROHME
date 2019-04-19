@@ -9,12 +9,31 @@ def determine_intersecting_segments(trace_group):
     mathematical symbols requiring two strokes 
 
     Parameters:
-    1. trace_group (dict) -
+    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
 
     Returns:
     1. intersect (boolean) - boolean determining if two lines intersect
     """
     
+def perform_segmentation(trace_group):
+    """
+    Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
+
+
+    Parameters:
+    1. trace_group (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
+
+    Returns:
+    1. new_trace_groups (list) - returns a list of newly formed traces group that will have the features extracted.
+                                This is a list of dictionaries with the key as a tuple of trace_ids and the value as the list of coordinates 
+                                representing their respective trace_id (it is a list of lists). 
+
+                                TODO: Is this really how we want to represent it? There must be a better way. 
+                                Return to this (list of list of tracegroups? idk)
+    """
+    
+
+
 
 def orientation(p, q, r):
     """

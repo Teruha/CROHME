@@ -87,7 +87,7 @@ def scale_points(trace_dict, max_x, min_x, max_y, min_y):
     new_trace_dict (dict: {int -> arr}) - scaled collection of points
     """
     new_points = None
-    for trace_id, points in trace_dict.items(): 
+    for _, points in trace_dict.items(): # TODO: Qadir- This is only ever iterating over one key/value pair, see above (fix)
         x_coors, y_coors = separate_x_y_coors_from_points(points)
         for i in range(len(x_coors)):
             if max_x - min_x == 0:
@@ -158,7 +158,6 @@ def smooth_points(trace_dict):
         x_coors, y_coors = separate_x_y_coors_from_points(points)
         new_x_coors, new_y_coors = [], []
         new_points = []
-        # TODO for Qadir: understand this - https://github.com/dhavalc25/Handwritten-Math-Expression-Recognition/blob/master/project1.py#L276  
         if(len(x_coors) == 2):
                 new_x_coors, new_y_coors = interpolate_spline_points(x_coors,y_coors, deg=1)
         if(len(x_coors) == 3):
