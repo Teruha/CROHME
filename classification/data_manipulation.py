@@ -1,9 +1,9 @@
 import pandas as pd
-from feature_extraction import extract_features
-from file_manipulation import map_ids_to_symbols
+from classification.feature_extraction import extract_features
+from classification.file_manipulation import map_ids_to_symbols
 from sklearn.model_selection import train_test_split
 
-def split_data(df):
+def split_data(df, test_size=0.30):
     """
     Use scikit-learn traint_test_split method to partition the data into training and testing sets
 
@@ -19,11 +19,11 @@ def split_data(df):
     # x = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
     x = df
     y = df['SYMBOL_REPRESENTATION']
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.30, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=42)
     
     return x_train, x_test, y_train, y_test
 
-def build_training_data(symbol_files, junk_files, print_progress=True):
+def build_training_data(symbol_files, junk_files=[], print_progress=True):
     """
     Given the symbol files as input, create a dataframe from the given data
 

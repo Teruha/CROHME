@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import os
 
 from sys import platform
-from constants import *
+from classification.constants import *
 
 def draw_xml_file(trace_dict):
     """
@@ -75,6 +75,30 @@ def read_training_symbol_directory():
                             training_symbol_files.append(dirname +'/'+ f)
     os.chdir('..')
     training_symbol_files.sort(key=lambda s: file_sorting_helper(s))
+    return training_symbol_files
+
+def get_inkml_files(dir):
+    """
+    This function grabs all .inkml files from a given directory
+
+    Parameters:
+    1. dir (str) - the directory that will be walked through to look for '.inkml' files 
+
+    Returns:
+    1. inkml_files (list) - list of the full paths of all '.inkml' files
+    """
+    training_symbol_files = []
+    original_dir = os.getcwd()
+    os.chdir(dir)
+    for (dirname, _, files) in os.walk(os.getcwd()):
+        for f in files:
+            if (f not in EXCLUDED_FILES) and ('.inkml' in f): # we want to ignore these files
+                if platform == WINDOWS_PLATFORM:
+                    training_symbol_files.append(dirname +'\\'+ f)
+                else:
+                    training_symbol_files.append(dirname +'/'+ f)
+    os.chdir(original_dir)
+    training_symbol_files.sort()
     return training_symbol_files
 
 def read_training_junk_directory():

@@ -1,8 +1,8 @@
 import numpy as np
 import bs4
 
-from points_manipulation import *
-from file_manipulation import draw_xml_file
+from classification.points_manipulation import *
+from classification.file_manipulation import draw_xml_file
 
 def extract_num_points_and_strokes(trace_dict):
     """
