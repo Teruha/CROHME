@@ -2,7 +2,6 @@
 import numpy as np
 from classification.points_manipulation import separate_x_y_coors_from_points
 
-
 def determine_intersecting_segments(trace_group):
     """
     Determines if two line segments in a trace group intersect with each other, 
@@ -18,6 +17,17 @@ def determine_intersecting_segments(trace_group):
     
 
 def orientation(p, q, r):
+    """
+    Determine the orientation of ordered triplet
+
+    Parameters:
+    1. p (tuple) - x,y tuple representing a coordinate
+    2. q (tuple) - x,y tuple representing a coordinate
+    3. r (tuple) - x,y tuple representing a coordinate
+
+    Return:
+    1. orientation (int) - the orientation of the triplet, where 0 is colinear, 1 is clockwise, 2 is counterclockwise
+    """
     # p[0] is the x coordinate
     # p[1] is the y coordinate
     val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
@@ -29,13 +39,35 @@ def orientation(p, q, r):
     
 
 def on_segment(p, q, r):
+    """
+    Given three colinear points p, q, r, the function checks if point q lies on line segment 'pr'
+
+    Parameters:
+    1. p (tuple) - x,y tuple representing a coordinate
+    2. q (tuple) - x,y tuple representing a coordinate
+    3. r (tuple) - x,y tuple representing a coordinate
+
+    Return:
+    1. on_segement (boolean) - returns true or false depending on if point 'q' lies on 'pr'
+    """
     if q[0] <= max([p[0], r[0]]) and q[0] >= min([p[0], r[0]]) and q[1] <= max([p[1], r[1]]) and q[1] >= min([p[1], r[1]]):
         return True
     return False
 
 
 def do_lines_intersect(p1, p2, q1, q2):
-    
+    """
+    The main function that returns true if line segment p1-q1 and p2-q2 intersect. 
+
+    Parameters:
+    1. p1 (tuple) - x,y tuple representing a coordinate
+    2. q1 (tuple) - x,y tuple representing a coordinate
+    3. p2 (tuple) - x,y tuple representing a coordinate
+    4. q2 (tuple) - x,y tuple representing a coordinate
+
+    Returns:
+    1. do_lines_intersect (boolean) - returns true or false if these two line segements intersect
+    """
     o1 = orientation(p1, q1, p2)
     o2 = orientation(p1, q1, q2)
     o3 = orientation(p2, q2, p1)
