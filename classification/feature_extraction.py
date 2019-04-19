@@ -207,10 +207,11 @@ def extract_features(file, draw_input_data=False):
 
         for node in soup.findAll('annotation')[1]:
             unique_id = str(node)
+
         
         trace_dict = {}
-        for i, trace in enumerate(soup.findAll('trace')):
-            trace_dict[i] = get_coordinates_from_trace(trace)
+        for trace in soup.findAll('trace'):
+            trace_dict[trace['id']] = get_coordinates_from_trace(trace)
         trace_dict = normalize_drawing(smooth_points(remove_consecutive_duplicate_points(trace_dict)))
 
         if draw_input_data:
