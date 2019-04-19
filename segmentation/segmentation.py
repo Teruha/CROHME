@@ -2,39 +2,6 @@
 import numpy as np
 from classification.points_manipulation import separate_x_y_coors_from_points
 
-def determine_intersecting_segments(trace_group):
-    """
-    Determines if two line segments in a trace group intersect with each other, 
-    if they do, there's a good chance we have two tracegroups that represent a 
-    mathematical symbols requiring two strokes 
-
-    Parameters:
-    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
-
-    Returns:
-    1. intersect (boolean) - boolean determining if two lines intersect
-    """
-    
-def perform_segmentation(trace_group):
-    """
-    Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
-
-
-    Parameters:
-    1. trace_group (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
-
-    Returns:
-    1. new_trace_groups (list) - returns a list of newly formed traces group that will have the features extracted.
-                                This is a list of dictionaries with the key as a tuple of trace_ids and the value as the list of coordinates 
-                                representing their respective trace_id (it is a list of lists). 
-
-                                TODO: Is this really how we want to represent it? There must be a better way. 
-                                Return to this (list of list of tracegroups? idk)
-    """
-    
-
-
-
 def orientation(p, q, r):
     """
     Determine the orientation of ordered triplet
@@ -105,6 +72,29 @@ def do_lines_intersect(p1, p2, q1, q2):
         return True
     return False
 
+def determine_intersecting_traces(trace_group):
+    """
+    Determines if two line segments in a trace group intersect with each other, 
+    if they do, there's a good chance we have two tracegroups that represent a 
+    mathematical symbols requiring two strokes 
+
+    Parameters:
+    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
+
+    Returns:
+    1. intersect (list) - list of tuples determining which lines intersect with one another
+    """
+    intersecting_lines = []
+    for t1 in trace_group:
+        for t2 in trace_group:
+            if t1 != t2:
+                line1_p1 = trace_group[t1][0]
+                line1_q1 = trace_group[t1][1]
+                line2_p2 = trace_group[t2][0]
+                line2_q2 = trace_group[t2][1]
+                if do_lines_intersect(line1_p1, line2_p2, line1_q1, line2_q2):
+                    intersecting_lines.append((t1, t2))
+    return intersecting_lines
 
 def bounding_box(trace_points):
     """
@@ -243,3 +233,22 @@ def density_histogram(trace_dict):
                 freq_x[4] += 1
 
     return freq_x
+
+def perform_segmentation(trace_group):
+    """
+    Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
+
+
+    Parameters:
+    1. trace_group (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
+
+    Returns:
+    1. new_trace_groups (list) - returns a list of newly formed traces group that will have the features extracted.
+                                This is a list of dictionaries with the key as a tuple of trace_ids and the value as the list of coordinates 
+                                representing their respective trace_id (it is a list of lists). 
+
+                                TODO: Is this really how we want to represent it? There must be a better way. 
+                                Return to this (list of list of tracegroups? idk)
+    """
+    intersecting_lines = determine_intersecting_traces(trace_group)
+    
