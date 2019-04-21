@@ -1,4 +1,4 @@
-
+import math
 import numpy as np
 from classification.points_manipulation import separate_x_y_coors_from_points
 
@@ -234,6 +234,93 @@ def density_histogram(trace_dict):
 
     return freq_x
 
+def get_merging_threshold(trace_group):
+    """
+    Get a reasonable threshold for merging given the traces and the maximum x,y and minimum x,y and 
+    the number of traces
+
+    Parameters:
+    1. min_x (list) - maximum x value of a trace_group
+    2. min_y (int) - maximum y value of a trace_group
+    3. max_x (int) - minimum x value of a trace_group
+    4. max_y (int) - minimum y value of a trace_group
+    5. num_traces (int) - number of traces in the trace group
+
+    Returns:
+    1. threshold (float) - the minimum threshold required for use to consider two traces 'mergeable'
+    """
+
+    min_x = np.inf
+    min_y = np.inf
+    max_x = -np.inf
+    max_y = -np.inf
+    for _, points in trace_group.items():
+        xs, ys = separate_x_y_coors_from_points(points)
+        max_x = max(xs) if max(xs) > max_x else max_x 
+        min_x = min(xs) if min(xs) < min_x else min_x
+        max_y = max(ys) if max(ys) > max_y else max_y
+        min_y = min(ys) if min(ys) < min_y else min_y
+
+    max_range = 0
+    min_range = 0
+    if max_x - min_x <= max_y - min_y:
+        max_range = max_y - min_y
+        min_range = max_x - min_x
+    else:
+        max_range = max_x - min_x
+        min_range = max_y - min_y
+    return (max_range-min_range)/(len(trace_group) + 1) # play around with this value 
+
+def calculate_center_of_mass(points):
+    """
+    Given a particular trace, calculate the center of mass
+
+    Parameters:
+    1. points (list) -list of coordinates that represent the trace
+
+    Returns:
+    1. com_x (float) - center of mass of the x coordinates
+    2. com_y (float) - center of mass of the y coordinates
+    """
+    xs, ys = separate_x_y_coors_from_points(points)
+    return (sum(xs)/len(xs), sum(ys)/len(ys))
+
+def can_traces_merge(points_1, points_2, threshold):
+    """
+    Determine if two traces from the same trace group can be merged by calculating each trace's 
+    center of mass
+    
+    Parameters:
+    1. points_1 (list) - list of coordinates that represent the trace
+    2. points_2 (list) - list of coordinates that represent the trace
+
+    Returns:
+    1. can_be_merged (boolean) - boolean value based on calculations of the two traces merging together or not
+    """
+    trace_1_center = calculate_center_of_mass(points_1)
+    trace_2_center = calculate_center_of_mass(points_2)
+    if threshold >= math.sqrt((trace_1_center[0] - trace_2_center[0])**2 + (trace_1_center[1] - trace_2_center[1])**2):
+        return True
+    return False
+
+def determine_mergeable_traces(trace_group):
+    """
+    Given a grou[ of traces, determine which ones can be merged via center of mass
+
+    Parameters:
+    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
+
+    Returns:
+    1. mergeable_traces (list) - list of mergeable 
+    """
+    mergeable_traces = []
+    threshold = get_merging_threshold(trace_group)
+    for trace_id_1, points_1 in trace_group.items():
+        for trace_id_2, points_2 in trace_group.items():
+            if trace_id_1 != trace_id_2 and can_traces_merge(points_1, points_2, threshold):
+                mergeable_traces.append((trace_id_1, trace_id_2))
+    return mergeable_traces
+                
 def perform_segmentation(trace_group):
     """
     Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
@@ -250,5 +337,11 @@ def perform_segmentation(trace_group):
                                 TODO: Is this really how we want to represent it? There must be a better way. 
                                 Return to this (list of list of tracegroups? idk)
     """
-    intersecting_lines = determine_intersecting_traces(trace_group)
+    intersecting_traces = determine_intersecting_traces(trace_group)
+    mergable_traces = determine_mergeable_traces(trace_group)
+    
+    # should we use the intersection of these lists or the union of them to 
+    # determine if these traces should belong together
+
+    group_traces = set(intersecting_traces).intersection(mergable_traces)
     
