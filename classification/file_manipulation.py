@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt
 import os
+from classification.constants as CONST
+import matplotlib.pyplot as plt
 
 from sys import platform
-from classification.constants import *
 
 def draw_xml_file(trace_dict):
     """
@@ -171,3 +171,50 @@ def map_ids_to_symbols():
         for line in f:
             ground_truth_dict[line.split(',')[0]] = line.split(',')[1].strip('\n')
     return ground_truth_dict
+
+
+def create_lg_file(x_test, predictions):
+    """
+    Creates lg files from the predictions
+
+    Parameters:
+    1. x_test (pandas series) - subset of the main dataframe that we will use for testing the classifier
+    2. predictions (pandas series) - the predicted symbols given the x_test as input 
+
+    Returns:
+    None
+    """
+    full_lg_dir = os.path.join(os.getcwd(), CONST.LG_PREDICTIONS_DIRECTORY)
+    if not os.path.isdir(full_lg_dir):
+        os.mkdir(full_lg_dir)
+    os.chdir(full_lg_dir)
+    for the_file in os.listdir(os.getcwd()):
+        file_path = os.path.join(full_lg_dir, the_file)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+    file_out_dict = {} 
+    for uid, pred in zip(x_test['UI'], predictions):
+        # file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
+        if uid not in file_out_dict:
+            file_out_dict[uid] = []
+        file_out_dict[uid].append(pred)
+    
+    # make a dictionary for the results of each UID 
+    for uid, preds in file_out_dict.items():
+        file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
+        previously_seen_items = {}
+        with open(file_name, 'a+') as f:
+            for p in preds:
+                if p not in previously_seen_items:
+                    previously_seen_items = 0
+                previously_seen_items += 1
+                line = 'O, {0}_{1}, {0}, 1.0,'.format(p, previously_seen_items[p])
+                # strokes = # Need to somehow add strokes to the end of the line, a bit difficult, 
+                # I think we need to add the strokes as a part of the dataframe as a list, then grab 
+                # the list here from 'x_test' 
+                f.write(line) 
+
+            
+
+        

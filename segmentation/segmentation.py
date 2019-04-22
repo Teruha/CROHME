@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 
 from classification.points_manipulation import separate_x_y_coors_from_points
+from classification.file_manipulation import create_lg_file
 from CROHME import *
 
 def orientation(p, q, r):
@@ -424,7 +425,8 @@ def segmentation_main():
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1], segmentation=True)
             _, x_test, _, y_test = split_data(df)
-            test_random_forest_classifier(x_test, y_test)
+            predictions = test_random_forest_classifier(x_test, y_test)
+            create_lg_file(x_test, predictions)
         elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
             df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2], True)
             x_train, _, y_train, _ = split_data(df, 0.00)
