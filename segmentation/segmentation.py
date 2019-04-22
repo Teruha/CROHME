@@ -1,6 +1,9 @@
 import math
 import numpy as np
+import itertools
+
 from classification.points_manipulation import separate_x_y_coors_from_points
+from CROHME import *
 
 def orientation(p, q, r):
     """
@@ -72,26 +75,26 @@ def do_lines_intersect(p1, p2, q1, q2):
         return True
     return False
 
-def determine_intersecting_traces(trace_group):
+def determine_intersecting_traces(trace_dict):
     """
     Determines if two line segments in a trace group intersect with each other, 
     if they do, there's a good chance we have two tracegroups that represent a 
     mathematical symbols requiring two strokes 
 
     Parameters:
-    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
+    1. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
 
     Returns:
     1. intersect (list) - list of tuples determining which lines intersect with one another
     """
     intersecting_lines = []
-    for t1 in trace_group:
-        for t2 in trace_group:
+    for t1 in trace_dict:
+        for t2 in trace_dict:
             if t1 != t2:
-                line1_p1 = trace_group[t1][0]
-                line1_q1 = trace_group[t1][1]
-                line2_p2 = trace_group[t2][0]
-                line2_q2 = trace_group[t2][1]
+                line1_p1 = trace_dict[t1][0]
+                line1_q1 = trace_dict[t1][1]
+                line2_p2 = trace_dict[t2][0]
+                line2_q2 = trace_dict[t2][1]
                 if do_lines_intersect(line1_p1, line2_p2, line1_q1, line2_q2):
                     intersecting_lines.append((t1, t2))
     return intersecting_lines
@@ -234,16 +237,16 @@ def density_histogram(trace_dict):
 
     return freq_x
 
-def get_merging_threshold(trace_group):
+def get_merging_threshold(trace_dict):
     """
     Get a reasonable threshold for merging given the traces and the maximum x,y and minimum x,y and 
     the number of traces
 
     Parameters:
-    1. min_x (list) - maximum x value of a trace_group
-    2. min_y (int) - maximum y value of a trace_group
-    3. max_x (int) - minimum x value of a trace_group
-    4. max_y (int) - minimum y value of a trace_group
+    1. min_x (list) - maximum x value of a trace_dict
+    2. min_y (int) - maximum y value of a trace_dict
+    3. max_x (int) - minimum x value of a trace_dict
+    4. max_y (int) - minimum y value of a trace_dict
     5. num_traces (int) - number of traces in the trace group
 
     Returns:
@@ -254,7 +257,7 @@ def get_merging_threshold(trace_group):
     min_y = np.inf
     max_x = -np.inf
     max_y = -np.inf
-    for _, points in trace_group.items():
+    for _, points in trace_dict.items():
         xs, ys = separate_x_y_coors_from_points(points)
         max_x = max(xs) if max(xs) > max_x else max_x 
         min_x = min(xs) if min(xs) < min_x else min_x
@@ -269,7 +272,7 @@ def get_merging_threshold(trace_group):
     else:
         max_range = max_x - min_x
         min_range = max_y - min_y
-    return (max_range-min_range)/(len(trace_group) + 1) # play around with this value 
+    return (max_range-min_range)/(len(trace_dict) + 1) # play around with this value 
 
 def calculate_center_of_mass(points):
     """
@@ -303,45 +306,138 @@ def can_traces_merge(points_1, points_2, threshold):
         return True
     return False
 
-def determine_mergeable_traces(trace_group):
+def determine_mergeable_traces(trace_dict):
     """
     Given a grou[ of traces, determine which ones can be merged via center of mass
 
     Parameters:
-    1. trace_group (dict: {int -> arr}) - dictionary of trace_ids to coordinates
+    1. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
 
     Returns:
     1. mergeable_traces (list) - list of mergeable 
     """
     mergeable_traces = []
-    threshold = get_merging_threshold(trace_group)
-    for trace_id_1, points_1 in trace_group.items():
-        for trace_id_2, points_2 in trace_group.items():
+    threshold = get_merging_threshold(trace_dict)
+    for trace_id_1, points_1 in trace_dict.items():
+        for trace_id_2, points_2 in trace_dict.items():
             if trace_id_1 != trace_id_2 and can_traces_merge(points_1, points_2, threshold):
                 mergeable_traces.append((trace_id_1, trace_id_2))
     return mergeable_traces
                 
-def perform_segmentation(trace_group):
+def perform_segmentation(trace_dict):
     """
     Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
 
 
     Parameters:
-    1. trace_group (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
+    1. trace_dict (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
 
     Returns:
-    1. new_trace_groups (list) - returns a list of newly formed traces group that will have the features extracted.
+    1. new_trace_dicts (list) - returns a list of newly formed traces group that will have the features extracted.
                                 This is a list of dictionaries with the key as a tuple of trace_ids and the value as the list of coordinates 
                                 representing their respective trace_id (it is a list of lists). 
 
                                 TODO: Is this really how we want to represent it? There must be a better way. 
                                 Return to this (list of list of tracegroups? idk)
     """
-    intersecting_traces = determine_intersecting_traces(trace_group)
-    mergable_traces = determine_mergeable_traces(trace_group)
+    intersecting_traces = determine_intersecting_traces(trace_dict)
+    mergable_traces = determine_mergeable_traces(trace_dict)
     
     # should we use the intersection of these lists or the union of them to 
     # determine if these traces should belong together
 
-    group_traces = set(intersecting_traces).intersection(mergable_traces)
+    return list(set(intersecting_traces).intersection(mergable_traces)) # we can either intersect or union here
+
+def merge_tuples(tups):
+    """
+    Merges tuples in a way that makes all tuples with common elements form one set
+    ex. merge_tuples([(1, 2), (3, 4), (1, 4)]) = {1, 2, 3, 4}
+
+    Parameters:
+    tups (list) - list of tuples
+
+    Returns:
+    groups (set) - list of sets
+    """
+    groups = [set(t) for t in tups]
+    while True:
+        for a, b in itertools.combinations(groups, 2):
+            # if the groups can be merged
+            if len(a & b):
+                # construct new groups list
+                groups = [g for g in groups if g != a and g != b]
+                groups.append(a | b)
+
+                # break the for loop and restart
+                break
+        else:
+            # the for loop ended naturally, so no overlapping groups were found
+            break
+    return groups
+
+def segment_trace_dicts(trace_dict):
+    """
+    Takes the results from the segmentation performed above and forms new trace_dicts based on the 
+    traces calculated to belong together
+
+    Parameters:
+    1. trace_dict (dict) - unsegmented traces  
+
+    Returns:
+    1. trace_dicts (dicts) - list of newly segmented trace_dicts
+    """
+    segmented_groups = perform_segmentation(trace_dict)
+    trace_dicts = []
+    # remember that multiple trace id's can make up 1 symbol, and we want a trace_dict to represent a single symbol
+    segmented_groups = merge_tuples(segmented_groups)
+
+    for combined_traces in segmented_groups:
+        new_trace_dict = {}
+        for trace_id in combined_traces:
+            new_trace_dict[trace_id] = trace_dict[trace_id]
+        trace_dicts.append(new_trace_dict)
+    
+    return trace_dicts
+
+def segmentation_main():
+    """
+    Differs from classification in a few ways. We need to read in the .inkML files that need to be segmented.
+    Then when we parse the segmentations, we need to extract the features out of the traces and classify them.
+
+    Parameters:
+    None (for now)
+
+    Returns:
+    None
+    """
+
+    if len(sys.argv) == 1:
+        print('USAGE: [[python3]] CROHME.PY [training_dir] [testing_dir] [(-tr)ain|(-te)st|(-b)oth]')
+        print('Ex. 1: python3 CROHME.PY [training_symbols_dir OR .pkl file] [testing_symbols_dir OR .pkl file] -b')
+        print('Ex. 2: python3 CROHME.PY [training_symbols_dir OR .pkl file] -tr')
+        print('Ex. 2: python3 CROHME.PY [testing_symbols_dir OR .pkl file]  -te')
+    elif len(sys.argv) == 3 or len(sys.argv) == 4:
+        if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
+            df = load_files_to_dataframe(sys.argv[1], segmentation=True)
+            x_train, _, y_train, _ = split_data(df)
+            train_random_forest_classifier(x_train, y_train)
+        elif sys.argv[-1] == '-te': # test the model, this means it already exists
+            df = load_files_to_dataframe(sys.argv[1], segmentation=True)
+            _, x_test, _, y_test = split_data(df)
+            test_random_forest_classifier(x_test, y_test)
+        elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
+            df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2], True)
+            x_train, _, y_train, _ = split_data(df, 0.00)
+            _, x_test, _, y_test = split_data(df2, 1)
+            train_random_forest_classifier(x_train, y_train)
+            test_random_forest_classifier(x_test, y_test)
+        else:
+            print('ERROR: NO FLAG OR INVALID FLAG SPECIFIED.')
+    else:
+        print('INVALID PARAMETERS, PLEASE RUN FILE WITH NO PARAMETERS TO SEE USAGE.')
+
+
+if __name__ == '__main__':
+    segmentation_main()
+   
     

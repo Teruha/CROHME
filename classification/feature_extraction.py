@@ -3,6 +3,7 @@ import bs4
 
 from classification.points_manipulation import *
 from classification.file_manipulation import draw_xml_file
+from classification.data_manipulation import create_trace_dict
 
 def extract_num_points_and_strokes(trace_dict):
     """
@@ -191,7 +192,7 @@ def extract_frequencies(trace_dict):
     frequencies = [freq_x, freq_y]
     return frequencies
 
-def extract_features(file, draw_input_data=False):
+def extract_features(trace_dict, unique_id, draw_input_data=False):
     """
     Extracts features from a single data file
 
@@ -201,39 +202,28 @@ def extract_features(file, draw_input_data=False):
     Returns:
     row (dict) - dictionary mapping the features to the data for a particular sample 
     """
-    with open(file, 'r') as f:
-        soup = bs4.BeautifulSoup(f, features='lxml')
-        unique_id = None
+    trace_dict = normalize_drawing(smooth_points(remove_consecutive_duplicate_points(trace_dict)))
+    if draw_input_data:
+        draw_xml_file(trace_dict)
+    num_points, num_strokes = extract_num_points_and_strokes(trace_dict)
+    directions = extract_directions(trace_dict)
+    if len(directions) == 0:
+        directions.append(0)
+    initial_direction = directions[0]
+    end_direction = directions[-1]
 
-        for node in soup.findAll('annotation')[1]:
-            unique_id = str(node)
+    curvature = extract_curvature(trace_dict)
+    aspect_ratio = extract_aspect_ratio(trace_dict)
+    frequencies = extract_frequencies(trace_dict)
 
-        trace_dict = {}
-        for trace in soup.findAll('trace'):
-            trace_dict[trace['id']] = get_coordinates_from_trace(trace)
-        trace_dict = normalize_drawing(smooth_points(remove_consecutive_duplicate_points(trace_dict)))
+    row = {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
+        'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
+        'ASPECT_RATIO': aspect_ratio}
 
-        if draw_input_data:
-            draw_xml_file(trace_dict)
-        num_points, num_strokes = extract_num_points_and_strokes(trace_dict)
-        directions = extract_directions(trace_dict)
-        if len(directions) == 0:
-            directions.append(0)
-        initial_direction = directions[0]
-        end_direction = directions[-1]
+    for i, f_x in enumerate(frequencies[0]):
+        row['f_x_{0}'.format(i)] = f_x
+    for i, f_y in enumerate(frequencies[1]):
+        row['f_y_{0}'.format(i)] = f_y
 
-        curvature = extract_curvature(trace_dict)
-        aspect_ratio = extract_aspect_ratio(trace_dict)
-        frequencies = extract_frequencies(trace_dict)
-
-        row = {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
-            'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
-            'ASPECT_RATIO': aspect_ratio}
-
-        for i, f_x in enumerate(frequencies[0]):
-            row['f_x_{0}'.format(i)] = f_x
-        for i, f_y in enumerate(frequencies[1]):
-            row['f_y_{0}'.format(i)] = f_y
-
-        row['SYMBOL_REPRESENTATION'] = None
+    row['SYMBOL_REPRESENTATION'] = None
     return row
