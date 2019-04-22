@@ -173,7 +173,7 @@ def map_ids_to_symbols():
     return ground_truth_dict
 
 
-def create_lg_file(x_test, predictions):
+def create_lg_files(x_test, predictions):
     """
     Creates lg files from the predictions
 
@@ -193,28 +193,30 @@ def create_lg_file(x_test, predictions):
         try:
             if os.path.isfile(file_path):
                 os.remove(file_path)
+    
     file_out_dict = {} 
-    for uid, pred in zip(x_test['UI'], predictions):
-        # file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
+    for uid, traces, pred in zip(x_test['UI'], x_test['TRACES'], predictions):
         if uid not in file_out_dict:
-            file_out_dict[uid] = []
-        file_out_dict[uid].append(pred)
+            file_out_dict[uid] = {}
+        if pred not in file_out_dict[uid]:
+            file_out_dict[uid][pred] = []    
+        file_out_dict[uid][pred].append(traces)
+    
+    for uid, preds in file_out_dict.items():
+        file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
+        f.write('# IUD, {0}'.format(uid))
+        num_elements = 0 
+        for p, traces in preds.items():
+            num_elements += len(traces)
+        f.write('# Objects({0})'.format(num_elements))
     
     # make a dictionary for the results of each UID 
     for uid, preds in file_out_dict.items():
         file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
-        previously_seen_items = {}
         with open(file_name, 'a+') as f:
-            for p in preds:
-                if p not in previously_seen_items:
-                    previously_seen_items = 0
-                previously_seen_items += 1
-                line = 'O, {0}_{1}, {0}, 1.0,'.format(p, previously_seen_items[p])
-                # strokes = # Need to somehow add strokes to the end of the line, a bit difficult, 
-                # I think we need to add the strokes as a part of the dataframe as a list, then grab 
-                # the list here from 'x_test' 
-                f.write(line) 
-
-            
-
+            for i, (p, traces) in enumerate(preds.items()):
+                for trace in traces:
+                    character_traces = ','.join(trace)
+                    line = 'O, {0}_{1}, {0}, 1.0, {2}\n'.format(p, i, character_traces)
+                    f.write(line)
         

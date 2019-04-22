@@ -226,4 +226,5 @@ def extract_features(trace_dict, unique_id, draw_input_data=False):
         row['f_y_{0}'.format(i)] = f_y
 
     row['SYMBOL_REPRESENTATION'] = None
+    row['TRACES'] = None
     return row
