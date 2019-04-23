@@ -423,14 +423,19 @@ def segmentation_main():
     elif len(sys.argv) == 3 or len(sys.argv) == 4:
         if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
-            x_train, _, y_train, _ = split_data(df, 0.00)
+            x_train = None
+            if 'TRACES' in list(df.columns):
+                x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES'], axis=1))
+            else:
+                x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
+            y_train = df['SYMBOL_REPRESENTATION']
             train_random_forest_classifier(x_train, y_train)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
-            _, x_test, _, y_test = split_data(df, 0.99)
-            dropped_x_test = x_test.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
+            dropped_x_test = df.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
+            y_test = df['SYMBOL_REPRESENTATION']
             predictions = test_random_forest_classifier(dropped_x_test, y_test, 200)
-            create_lg_files(x_test, predictions)
+            create_lg_files(df, predictions)
         elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
             df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2], True)
             x_train, _, y_train, _ = split_data(df, 0.00)
