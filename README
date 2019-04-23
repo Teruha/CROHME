@@ -1,0 +1,6 @@
+# Running and testing the program:
+[[python3]] segmentation.py [inkml file directory] -te
+
+# Testing the predictions:
+./evaluate [lg_pred full path] [ground truth lg files]
+
