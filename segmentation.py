@@ -288,7 +288,7 @@ def calculate_center_of_mass(points):
     xs, ys = separate_x_y_coors_from_points(points)
     return (sum(xs)/len(xs), sum(ys)/len(ys))
 
-def can_traces_merge(points_1, points_2, threshold):
+def can_center_of_mass_of_traces_merge(points_1, points_2, threshold):
     """
     Determine if two traces from the same trace group can be merged by calculating each trace's 
     center of mass
@@ -296,6 +296,7 @@ def can_traces_merge(points_1, points_2, threshold):
     Parameters:
     1. points_1 (list) - list of coordinates that represent the trace
     2. points_2 (list) - list of coordinates that represent the trace
+    3. threshold (float) - maximum distance that we determine these strokes to be 'mergeable'  
 
     Returns:
     1. can_be_merged (boolean) - boolean value based on calculations of the two traces merging together or not
@@ -305,6 +306,25 @@ def can_traces_merge(points_1, points_2, threshold):
     if threshold >= math.sqrt((trace_1_center[0] - trace_2_center[0])**2 + (trace_1_center[1] - trace_2_center[1])**2):
         return True
     return False
+
+def can_closest_traces_merge(points_1, points_2, threshold):
+    """
+    Calculate the closest two points between strokes and determine if they can be merged based on the threshold 
+
+    Parameters:
+    1. points_1 (list) - list of coordinates that represent the trace
+    2. points_2 (list) - list of coordinates that represent the trace
+    3. threshold (float) - maximum distance that we determine these strokes to be 'mergeable'
+
+    Returns:
+    1. can_be_merged (boolean) - boolean value based on calculations of the two traces merging together or not
+    """
+    min_dist = np.inf
+    for p1 in points_1:
+        for p2 in points_2:
+            dist = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+            min_dist = min_dist if dist > min_dist else dist
+    return threshold >= dist 
 
 def determine_mergeable_traces(trace_dict):
     """
@@ -320,7 +340,8 @@ def determine_mergeable_traces(trace_dict):
     threshold = get_merging_threshold(trace_dict)
     for trace_id_1, points_1 in trace_dict.items():
         for trace_id_2, points_2 in trace_dict.items():
-            if trace_id_1 != trace_id_2 and can_traces_merge(points_1, points_2, threshold):
+            mergeable = (can_center_of_mass_of_traces_merge(points_1, points_2, threshold) or (can_closest_traces_merge(points_1, points_2, threshold)))
+            if trace_id_1 != trace_id_2 and mergeable:
                 mergeable_traces.append((trace_id_1, trace_id_2))
     return mergeable_traces
                 
