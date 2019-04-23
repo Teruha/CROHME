@@ -94,9 +94,9 @@ def determine_intersecting_traces(trace_dict):
         for t2 in trace_dict:
             if t1 != t2:
                 line1_p1 = trace_dict[t1][0]
-                line1_q1 = trace_dict[t1][1]
+                line1_q1 = trace_dict[t1][-1]
                 line2_p2 = trace_dict[t2][0]
-                line2_q2 = trace_dict[t2][1]
+                line2_q2 = trace_dict[t2][-1]
                 if do_lines_intersect(line1_p1, line2_p2, line1_q1, line2_q2):
                     intersecting_lines.append((t1, t2))
     return intersecting_lines
