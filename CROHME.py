@@ -26,8 +26,6 @@ def train_random_forest_classifier(x_train, y_train, n_estimators=100, criterion
     """
     if not os.path.isdir('models'):
         os.mkdir('models')
-    # x_train.drop(['UI','TRACES'], axis=1, inplace=True)
-    x_train.drop(['SYMBOL_REPRESENTATION','UI'], axis=1, inplace=True)    
     rfc = RandomForestClassifier(n_estimators=n_estimators, criterion=criterion)
     rfc.fit(x_train, y_train) 
     curr_path = os.path.dirname(os.path.abspath(__file__))
