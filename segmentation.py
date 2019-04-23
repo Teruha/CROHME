@@ -383,9 +383,20 @@ def segment_trace_dicts(trace_dict):
     1. trace_dicts (dicts) - list of newly segmented trace_dicts
     """
     segmented_groups = perform_segmentation(trace_dict)
+    
     trace_dicts = []
-    # remember that multiple trace id's can make up 1 symbol, and we want a trace_dict to represent a single symbol
-    segmented_groups = merge_tuples(segmented_groups)    
+    # remember that multiple trace ids can make up 1 symbol, and we want a trace_dict to represent a single symbol
+    segmented_groups = merge_tuples(segmented_groups) 
+    segmented_groups_set = set()
+    for group in segmented_groups:
+        for trace_id in group:
+            segmented_groups_set.add(trace_id)
+    
+    for trace_id in trace_dict:
+        if trace_id not in segmented_groups_set:
+            new_trace_dict = { trace_id: trace_dict[trace_id] }
+            trace_dicts.append(new_trace_dict)
+
     for combined_traces in segmented_groups:
         new_trace_dict = {}
         for trace_id in combined_traces:
