@@ -68,6 +68,7 @@ def test_random_forest_classifier(x_test, y_test, n_estimators=100, criterion=CO
         # print('Classification Report: ')
         # print(classification_report(y_test, rfc_pred))
         # print_top_n_predictions(rfc, 10, True, x_test)
+        
         return rfc_pred
 
 def print_top_n_predictions(model, n=10, is_rfc=False, x_test=None):

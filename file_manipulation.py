@@ -223,10 +223,8 @@ def build_training_data(symbol_files, junk_files=[], segment_data_func=None, pri
         unique_id = data_file.split('.')[0].split('/')[-1]
 
         # segmentation to be done here
-        if segment_data_func: 
-            # print('Performing segmentation..')  
+        if segment_data_func:
             segemented_trace_dicts = segment_data_func(trace_dict)
-            # print('Segmentation completed..')
             for trace_dict in segemented_trace_dicts:
                 row = extract_features(trace_dict, unique_id)
                 row['TRACES'] = list(trace_dict.keys())
@@ -327,13 +325,12 @@ def create_lg_files(x_test, predictions):
             f.write('# Objects({0})\n'.format(num_elements))
     
     for uid, preds in file_out_dict.items():
-        file_name = '{0}/{1}.lg'.format(full_lg_dir, uid)
-        print(file_name)
+        file_name = '{0}{1}.lg'.format(full_lg_dir, uid)
         with open(file_name, 'a+') as f:
             for p, traces in preds.items():
                 for i, trace in enumerate(traces):
                     character_traces = ', '.join(trace)
-                    line = 'O, {0}_{1}, {0}, 1.0, {2}\n'.format(p, i, character_traces)
+                    line = 'O, {0}_{1}, {0}, 1.0, {2}\n'.format(p, i+1, character_traces)
                     f.write(line)
     os.chdir('../')
         

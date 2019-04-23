@@ -383,15 +383,14 @@ def segment_trace_dicts(trace_dict):
     1. trace_dicts (dicts) - list of newly segmented trace_dicts
     """
     segmented_groups = perform_segmentation(trace_dict)
-    
     trace_dicts = []
     # remember that multiple trace ids can make up 1 symbol, and we want a trace_dict to represent a single symbol
-    segmented_groups = merge_tuples(segmented_groups) 
+    segmented_groups = merge_tuples(segmented_groups)
     segmented_groups_set = set()
     for group in segmented_groups:
         for trace_id in group:
             segmented_groups_set.add(trace_id)
-    
+
     for trace_id in trace_dict:
         if trace_id not in segmented_groups_set:
             new_trace_dict = { trace_id: trace_dict[trace_id] }
@@ -416,7 +415,6 @@ def segmentation_main():
     Returns:
     None
     """
-
     if len(sys.argv) == 1:
         print('USAGE: [[python3]] CROHME.PY [training_dir] [testing_dir] [(-tr)ain|(-te)st|(-b)oth]')
         print('Ex. 1: python3 CROHME.PY [training_symbols_dir OR .pkl file] [testing_symbols_dir OR .pkl file] -b')
@@ -425,18 +423,18 @@ def segmentation_main():
     elif len(sys.argv) == 3 or len(sys.argv) == 4:
         if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
-            x_train, _, y_train, _ = split_data(df)
+            x_train, _, y_train, _ = split_data(df, 0.00)
             train_random_forest_classifier(x_train, y_train)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
-            _, x_test, _, y_test = split_data(df)
+            _, x_test, _, y_test = split_data(df, 0.99)
             dropped_x_test = x_test.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
             predictions = test_random_forest_classifier(dropped_x_test, y_test, 200)
             create_lg_files(x_test, predictions)
         elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
             df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2], True)
             x_train, _, y_train, _ = split_data(df, 0.00)
-            _, x_test, _, y_test = split_data(df2, 1)
+            _, x_test, _, y_test = split_data(df2, 0.99)
             train_random_forest_classifier(x_train, y_train)
             test_random_forest_classifier(x_test, y_test)
         else:
