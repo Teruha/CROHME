@@ -1,9 +1,25 @@
 import numpy as np
 import bs4
+import matplotlib.pyplot as plt
+ 
+from points_manipulation import *
 
-from classification.points_manipulation import *
-from classification.file_manipulation import draw_xml_file
-from classification.data_manipulation import create_trace_dict
+def draw_xml_file(trace_dict):
+    """
+    Draw the trace groups from a given XML file
+
+    Parameters:
+    trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
+
+    Returns:
+    None
+    """
+    for _, points in trace_dict.items():
+        # Draw line segments between points on the plot, 
+        # to see points set the "marker" parameter to "+" or "o"
+        for i in range(len(points)-1):
+            plt.plot((points[i][0], points[i+1][0]), (points[i][1], points[i+1][1]), color='black')
+    plt.show()
 
 def extract_num_points_and_strokes(trace_dict):
     """
@@ -204,7 +220,7 @@ def extract_features(trace_dict, unique_id, draw_input_data=False):
     """
     trace_dict = normalize_drawing(smooth_points(remove_consecutive_duplicate_points(trace_dict)))
     if draw_input_data:
-        draw_xml_file(trace_dict)
+         draw_xml_file(trace_dict)
     num_points, num_strokes = extract_num_points_and_strokes(trace_dict)
     directions = extract_directions(trace_dict)
     if len(directions) == 0:

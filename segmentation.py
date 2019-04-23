@@ -1,10 +1,11 @@
 import math
 import numpy as np
 import itertools
+import sys
 
-from classification.points_manipulation import separate_x_y_coors_from_points
-from classification.file_manipulation import create_lg_files
-from CROHME import *
+from points_manipulation import separate_x_y_coors_from_points
+from file_manipulation import create_lg_files, load_files_to_dataframe, split_data
+from CROHME import test_random_forest_classifier, train_random_forest_classifier
 
 def orientation(p, q, r):
     """
@@ -191,7 +192,6 @@ def bounding_box_overlap_ydir(trace_points_1, trace_points_2):
 
 # TODO: may want to consider interpolating more points to get a more accurate density histogram.
 def density_histogram(trace_dict):
-
     """
     Extract the number of points in each of the equally spaced vertical bins. This will hopefully give us some
     context so we can tell which strokes/trace groups go together. The bins are calculated across all of the traces.
@@ -202,7 +202,6 @@ def density_histogram(trace_dict):
     Returns:
     frequencies (list) - [# points vertical bin]
     """
-
     num_bins = 10
 
     # get the max and min values for all x
@@ -309,7 +308,7 @@ def can_traces_merge(points_1, points_2, threshold):
 
 def determine_mergeable_traces(trace_dict):
     """
-    Given a grou[ of traces, determine which ones can be merged via center of mass
+    Given a group of traces, determine which ones can be merged via center of mass
 
     Parameters:
     1. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
@@ -329,7 +328,6 @@ def perform_segmentation(trace_dict):
     """
     Given a group of traces, attempt to group traces into groups that belong together, forming recognizable symbols 
 
-
     Parameters:
     1. trace_dict (dict: {int -> arr}) -  dictionary of trace_ids to coordinates
 
@@ -344,10 +342,7 @@ def perform_segmentation(trace_dict):
     intersecting_traces = determine_intersecting_traces(trace_dict)
     mergable_traces = determine_mergeable_traces(trace_dict)
     
-    # should we use the intersection of these lists or the union of them to 
-    # determine if these traces should belong together
-
-    return list(set(intersecting_traces).intersection(mergable_traces)) # we can either intersect or union here
+    return list(set(intersecting_traces).union(mergable_traces)) # as of right now, using intersection does not work, using union instead
 
 def merge_tuples(tups):
     """
@@ -390,8 +385,7 @@ def segment_trace_dicts(trace_dict):
     segmented_groups = perform_segmentation(trace_dict)
     trace_dicts = []
     # remember that multiple trace id's can make up 1 symbol, and we want a trace_dict to represent a single symbol
-    segmented_groups = merge_tuples(segmented_groups)
-
+    segmented_groups = merge_tuples(segmented_groups)    
     for combined_traces in segmented_groups:
         new_trace_dict = {}
         for trace_id in combined_traces:
@@ -419,13 +413,14 @@ def segmentation_main():
         print('Ex. 2: python3 CROHME.PY [testing_symbols_dir OR .pkl file]  -te')
     elif len(sys.argv) == 3 or len(sys.argv) == 4:
         if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
-            df = load_files_to_dataframe(sys.argv[1], segmentation=True)
+            df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
             x_train, _, y_train, _ = split_data(df)
             train_random_forest_classifier(x_train, y_train)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
-            df = load_files_to_dataframe(sys.argv[1], segmentation=True)
+            df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
             _, x_test, _, y_test = split_data(df)
-            predictions = test_random_forest_classifier(x_test, y_test)
+            dropped_x_test = x_test.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
+            predictions = test_random_forest_classifier(dropped_x_test, y_test, 200)
             create_lg_files(x_test, predictions)
         elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
             df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2], True)
