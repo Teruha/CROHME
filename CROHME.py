@@ -23,7 +23,7 @@ def train_random_forest_classifier(x_train, y_train, n_estimators=100, criterion
 
     Returns:
     1. rfc (sklearn.model) - Random Forest Classifier Scikit learn classifier
-    """
+    """    
     if not os.path.isdir('models'):
         os.mkdir('models')
     rfc = RandomForestClassifier(n_estimators=n_estimators, criterion=criterion)
@@ -40,6 +40,7 @@ def train_random_forest_classifier(x_train, y_train, n_estimators=100, criterion
     os.chdir(original_folder)
     with open(models_path + file_name, 'wb') as f:
         dump(rfc, f, compress=True)
+        print('Saved model "{0}" to {1}'.format(file_name, models_path))
     return rfc
 
 def test_random_forest_classifier(x_test, y_test, n_estimators=100, criterion=CONST.RFC_IMPURITY_CRITERION[0]):
@@ -100,17 +101,22 @@ def classification_main():
     if len(sys.argv) == 1:
         print('USAGE: [[python3]] CROHME.PY [training_dir] [testing_dir] [(-tr)ain|(-te)st|(-b)oth]')
         print('Ex. 1: python3 CROHME.PY [training_symbols_dir OR .pkl file] [testing_symbols_dir OR .pkl file] -b')
-        print('Ex. 2: python3 CROHME.PY [training_symbols_dir OR .pkl file] -tr')
+        print('Ex. 2: python3 CROHME.PY [training_symbols_dir OR .pkl file] <ground_truth_file> -tr')
         print('Ex. 2: python3 CROHME.PY [testing_symbols_dir OR .pkl file]  -te')
     elif len(sys.argv) == 3 or len(sys.argv) == 4:
         if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
-            df = load_files_to_dataframe(sys.argv[1])
-            x_train, _, y_train, _ = split_data(df)
-            train_random_forest_classifier(x_train, y_train)
+            if len(sys.argv) == 4:
+                df = load_files_to_dataframe(sys.argv[1], sys.argv[2]) # with ground truth files
+            else:
+                df = load_files_to_dataframe(sys.argv[1]) # without ground truth files
+            x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI', 'TRACES']), axis=1) 
+            y_train = df['SYMBOL_REPRESENTATION']
+            # x_train, _, y_train, _ = split_data(df)
+            train_random_forest_classifier(x_train, y_train, 200)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1])
             _, x_test, _, y_test = split_data(df)
-            test_random_forest_classifier(x_test, y_test)
+            test_random_forest_classifier(x_test, y_test, 200)
         elif sys.argv[-1] == '-b': # test and train the model, this means we need to recreate the model and test it
             df, df2 = load_files_to_dataframe(sys.argv[1], sys.argv[2])
             x_train, _, y_train, _ = split_data(df, 0.00)

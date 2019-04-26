@@ -8,6 +8,7 @@ from random import randint
 from points_manipulation import get_coordinates_from_trace
 from feature_extraction import extract_features
 from sklearn.model_selection import train_test_split
+from joblib import load, dump
 
 def file_sorting_helper(full_path_name):
     """
@@ -126,7 +127,7 @@ def read_training_junk_directory():
     return training_junk_files
 
 
-def map_ids_to_symbols():
+def map_ids_to_symbols(ground_truth_file):
     """
     Maps the unique id of each file to the symbol the file represents
 
@@ -137,23 +138,6 @@ def map_ids_to_symbols():
     ground_truth_dict (dict {String->String}) - dictionary of the unique id strings to their written symbols 
     """
     ground_truth_dict = {}
-    ground_truth_file = None 
-    for (dirname, dirs, files) in os.walk(os.getcwd()):
-        if 'trainingSymbols' in dirname:
-            os.chdir(dirname)
-            for (dirname, dirs, files) in os.walk(os.getcwd()):
-                for f in files:
-                    if (f == CONST.ISO_GROUND_TRUTH_FILE_NAME):
-                        if platform == CONST.WINDOWS_PLATFORM:
-                            ground_truth_file = dirname +'\\'+ f
-                        else:
-                            ground_truth_file = dirname +'/'+ f
-                        break
-                if ground_truth_file != None:
-                    break
-        if ground_truth_file != None:
-            break
-
     # build the ground truth to id dictionary
     with open(ground_truth_file, 'r') as f:
         for line in f:
@@ -180,7 +164,7 @@ def create_trace_dict(file):
         trace_dict = {}
         for trace in soup.findAll('trace'):
             trace_dict[trace['id']] = get_coordinates_from_trace(trace)
-        return trace_dict
+        return trace_dict, unique_id
 
 def split_data(df, test_size=0.30):
     """
@@ -202,7 +186,7 @@ def split_data(df, test_size=0.30):
     
     return x_train, x_test, y_train, y_test
 
-def build_training_data(symbol_files, junk_files=[], segment_data_func=None, print_progress=True):
+def build_training_data(symbol_files, junk_files=[], segment_data_func=None, print_progress=True, ground_truth_file=None):
     """
     Given the symbol files as input, create a dataframe from the given data
 
@@ -213,30 +197,31 @@ def build_training_data(symbol_files, junk_files=[], segment_data_func=None, pri
     1. df (Dataframe) - A pandas dataframe representation of the data
     """
     df = pd.DataFrame([]) # contains both junk and symbol files
-    ui_to_symbols = map_ids_to_symbols()
+    if ground_truth_file:
+        ui_to_symbols = map_ids_to_symbols(ground_truth_file)
     all_files = symbol_files[:]
     all_files.extend(junk_files)
     num_files = len(all_files)
     row_num = 0
     for data_file in all_files:
-        trace_dict = create_trace_dict(data_file)
-        unique_id = data_file.split('.')[0].split('/')[-1]
-
         # segmentation to be done here
+        trace_dict, unique_id = create_trace_dict(data_file)
         if segment_data_func:
             segemented_trace_dicts = segment_data_func(trace_dict)
-            for trace_dict in segemented_trace_dicts:
-                row = extract_features(trace_dict, unique_id)
-                row['TRACES'] = list(trace_dict.keys())
-                # row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']] # I don't there is a ground truth file for this 
+            unique_id = data_file.split('.')[0].split('/')[-1]
+            for segmented_trace_dict in segemented_trace_dicts:
+                row = extract_features(segmented_trace_dict, unique_id)
+                row['TRACES'] = list(segmented_trace_dict.keys())
+                if ground_truth_file:
+                    row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']]
                 if len(df.columns) == 0:
                     df = pd.DataFrame(columns=[n for n in row.keys()])
                 df.loc[row_num] = list(row.values())
                 row_num += 1
-            
         else:
             row = extract_features(trace_dict, unique_id)
-            row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']] if row['UI'] in ui_to_symbols else 'junk'
+            if ground_truth_file:
+                row['SYMBOL_REPRESENTATION'] = ui_to_symbols[row['UI']] if row['UI'] in ui_to_symbols else 'junk'
             if len(df.columns) == 0:
                 df = pd.DataFrame(columns=[n for n in row.keys()])
             df.loc[row_num] = list(row.values())
@@ -267,15 +252,26 @@ def load_files_to_dataframe(dir_name, second_dir=None, segment_data_func=None, s
         df = pd.read_pickle(dir_name)
     else: # read file(s) from input directory
         print('Building dataframe...')
-        df = build_training_data(get_inkml_files(dir_name), segment_data_func=segment_data_func)
+        if second_dir != None and os.path.isfile(second_dir):
+            print('Ground truth file specified')
+            df = build_training_data(get_inkml_files(dir_name), segment_data_func=segment_data_func, ground_truth_file=second_dir)
+        else:
+            df = build_training_data(get_inkml_files(dir_name), segment_data_func=segment_data_func)
         print('Dataframe created: \n {}'.format(df.head()))
         if save:
+            original_path = os.getcwd()
+            abs_path = os.path.dirname(os.path.abspath(__file__))
+            file_directory = 'classification/data_files' if not segment_data_func else 'segmentation/data_files'
+            saved_pkl_file_path = os.path.join(abs_path, file_directory)
+            os.chdir(saved_pkl_file_path)
             df.to_pickle(dir_name + '.pkl')
+            os.chdir(original_path)
     if not second_dir:
         return df
 
-    if '.pkl' in second_dir:
-        df2 = pd.read_pickle(second_dir)
+    if os.path.isfile(second_dir):
+        if '.pkl' in second_dir:
+            df2 = pd.read_pickle(second_dir)
     else: # read file(s) from input directory
         df2 = build_training_data(get_inkml_files(second_dir), segment_data_func=segment_data_func)
         if save:
@@ -334,3 +330,37 @@ def create_lg_files(x_test, predictions):
                     f.write(line)
     os.chdir('../')
         
+
+def save_trace_dicts(unique_ids_to_trace_dicts, classification_dir=True):
+    """
+    Dictionary of unique_ids mapped to trace_dicts
+
+    Parameters:
+    1. unique_ids_to_trace_dicts (dict: {str -> dict}) - Unique id's mapped to the trace_dict they represent 
+    
+    Returns:
+    None
+    """
+    start_path = os.path.dirname(os.path.abspath(__file__))
+    file_directory = 'classification/' if classification_dir else 'segmentation/'
+    data_files_dict_path = os.path.join(start_path, file_directory)
+    if not os.path.exists(data_files_dict_path):
+        os.mkdir(data_files_dict_path)
+        os.chdir(data_files_dict_path)
+        os.mkdir('data_files/')
+        data_files_dict_path = os.path.join(data_files_dict_path, 'data_files/')
+    os.chdir(data_files_dict_path)
+    dump(unique_ids_to_trace_dicts, CONST.CLASSIFICATION_TRACE_DICT_FILE_NAME, compress=True)
+    os.chdir(start_path)
+
+def load_trace_dicts(classification_dir=True):
+    start_path = os.path.dirname(os.path.abspath(__file__))
+    file_directory = 'classification/data_files' if classification_dir else 'segmentation/data_files'
+    data_files_dict_path = os.path.join(start_path, file_directory)
+    os.chdir(data_files_dict_path)
+    try:
+        all_trace_dicts = load(CONST.CLASSIFICATION_TRACE_DICT_FILE_NAME)
+        os.chdir(data_files_dict_path)
+        return all_trace_dicts
+    except FileNotFoundError as e:
+        raise e

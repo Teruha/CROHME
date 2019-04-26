@@ -4,78 +4,9 @@ import itertools
 import sys
 
 from points_manipulation import separate_x_y_coors_from_points
+from feature_extraction import do_lines_intersect
 from file_manipulation import create_lg_files, load_files_to_dataframe, split_data
 from CROHME import test_random_forest_classifier, train_random_forest_classifier
-
-def orientation(p, q, r):
-    """
-    Determine the orientation of ordered triplet
-
-    Parameters:
-    1. p (tuple) - x,y tuple representing a coordinate
-    2. q (tuple) - x,y tuple representing a coordinate
-    3. r (tuple) - x,y tuple representing a coordinate
-
-    Return:
-    1. orientation (int) - the orientation of the triplet, where 0 is colinear, 1 is clockwise, 2 is counterclockwise
-    """
-    # p[0] is the x coordinate
-    # p[1] is the y coordinate
-    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
-    
-    if val == 0:
-        return 0 # colinear
-    
-    return 1 if val > 0 else 2
-    
-
-def on_segment(p, q, r):
-    """
-    Given three colinear points p, q, r, the function checks if point q lies on line segment 'pr'
-
-    Parameters:
-    1. p (tuple) - x,y tuple representing a coordinate
-    2. q (tuple) - x,y tuple representing a coordinate
-    3. r (tuple) - x,y tuple representing a coordinate
-
-    Return:
-    1. on_segement (boolean) - returns true or false depending on if point 'q' lies on 'pr'
-    """
-    if q[0] <= max([p[0], r[0]]) and q[0] >= min([p[0], r[0]]) and q[1] <= max([p[1], r[1]]) and q[1] >= min([p[1], r[1]]):
-        return True
-    return False
-
-
-def do_lines_intersect(p1, p2, q1, q2):
-    """
-    The main function that returns true if line segment p1-q1 and p2-q2 intersect. 
-
-    Parameters:
-    1. p1 (tuple) - x,y tuple representing a coordinate
-    2. q1 (tuple) - x,y tuple representing a coordinate
-    3. p2 (tuple) - x,y tuple representing a coordinate
-    4. q2 (tuple) - x,y tuple representing a coordinate
-
-    Returns:
-    1. do_lines_intersect (boolean) - returns true or false if these two line segements intersect
-    """
-    o1 = orientation(p1, q1, p2)
-    o2 = orientation(p1, q1, q2)
-    o3 = orientation(p2, q2, p1)
-    o4 = orientation(p2, q2, q1)
-
-    if (o1 != o2 and o3 != o4):
-        return True
-    
-    if (o1 == 0 and on_segment(p1, p2, q1)):
-        return True
-    if (o2 == 0) and on_segment(p1, q2, q1):
-        return True
-    if (o3 == 0) and on_segment(p2, p1, q2):
-        return True
-    if (o4 == 0 and on_segment(p2, q1, q2)):
-        return True
-    return False
 
 def determine_intersecting_traces(trace_dict):
     """
@@ -324,7 +255,7 @@ def can_closest_traces_merge(points_1, points_2, threshold):
         for p2 in points_2:
             dist = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
             min_dist = min_dist if dist > min_dist else dist
-    return threshold >= dist 
+    return threshold >= dist
 
 def determine_mergeable_traces(trace_dict):
     """
@@ -443,14 +374,17 @@ def segmentation_main():
         print('Ex. 2: python3 CROHME.PY [testing_symbols_dir OR .pkl file]  -te')
     elif len(sys.argv) == 3 or len(sys.argv) == 4:
         if sys.argv[-1] == '-tr': # train the model, this means we are creating a new one
-            df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
+            if len(sys.argv) == 4:
+                df = load_files_to_dataframe(sys.argv[1], sys.argv[2], segment_data_func=segment_trace_dicts) # with ground truth files
+            else:
+                df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
             x_train = None
             if 'TRACES' in list(df.columns):
                 x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES'], axis=1))
             else:
                 x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI']), axis=1)
             y_train = df['SYMBOL_REPRESENTATION']
-            train_random_forest_classifier(x_train, y_train)
+            train_random_forest_classifier(x_train, y_train, n_estimators=200)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
             dropped_x_test = df.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
