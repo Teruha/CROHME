@@ -234,9 +234,7 @@ def can_center_of_mass_of_traces_merge(points_1, points_2, threshold):
     """
     trace_1_center = calculate_center_of_mass(points_1)
     trace_2_center = calculate_center_of_mass(points_2)
-    if threshold >= math.sqrt((trace_1_center[0] - trace_2_center[0])**2 + (trace_1_center[1] - trace_2_center[1])**2):
-        return True
-    return False
+    return threshold >= math.sqrt((trace_1_center[0] - trace_2_center[0])**2 + (trace_1_center[1] - trace_2_center[1])**2)
 
 def can_closest_traces_merge(points_1, points_2, threshold):
     """
