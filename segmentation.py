@@ -120,6 +120,68 @@ def bounding_box_overlap_ydir(trace_points_1, trace_points_2):
 
     return overlap
 
+def determine_overlapping_traces(trace_dict):
+    """
+    Determine which traces overlap within a trace_dict
+
+    Parameters:
+    trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
+
+    Returns:
+    overlapping_traces (list) - list of trace id's that overlap
+    """
+    overlapping_traces = []
+    for trace_id_1, points_1 in trace_dict.items():
+        for trace_id_2, points_2 in trace_dict.items():
+            if trace_id_1 != trace_id_2:
+                x_overlap = bounding_box_overlap_xdir(points_1, points_2)
+                y_overlap = bounding_box_overlap_ydir(points_1, points_2)
+                if x_overlap and y_overlap:
+                    overlapping_traces.append((trace_id_1, trace_id_2))
+    return overlapping_traces
+
+def bounding_boxes_dist(trace_points_1, trace_points_2):
+    """
+    Gets the distance between the bounding boxes of two trace groups 
+
+    Parameters:
+    trace_points_1 (list) - list of tuples representing x, y coordinates
+    trace_points_2 (list) - list of tuples representing x, y coordinates
+
+    Returns:
+    dist (float) - distance between two bounding box centers
+    """
+    bb1 = bounding_box(trace_points_1)  # min_x, max_x, min_y, max_y
+    bb2 = bounding_box(trace_points_2)
+    avg_x_1 = np.mean([bb1[0], bb1[1]])
+    avg_y_1 = np.mean([bb1[2], bb1[3]])
+    avg_x_2 = np.mean([bb2[0], bb2[1]])
+    avg_y_2 = np.mean([bb2[2], bb2[3]])
+
+    dist = math.sqrt((avg_x_1 - avg_x_2)**2 + (avg_y_1 - avg_y_2)**2)
+    return dist
+
+def determine_mergeable_bounding_boxes(trace_dict):
+    """
+    Determine which traces are mergeable given the bounding box values
+
+    Parameters:
+    trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
+
+    Returns:
+    mergeable_traces (list) - mergeable traces via bounding boxes
+    """
+    
+    mergeable_traces = []
+    threshold = get_merging_threshold(trace_dict)
+    for trace_id_1, points_1 in trace_dict.items():
+        for trace_id_2, points_2 in trace_dict.items():
+            if trace_id_1 != trace_id_2:
+                dist = bounding_boxes_dist(points_1, points_2)
+                if threshold >= dist:
+                    mergeable_traces.append((trace_id_1, trace_id_2))
+    return mergeable_traces
+
 
 # TODO: may want to consider interpolating more points to get a more accurate density histogram.
 def density_histogram(trace_dict):
@@ -168,7 +230,7 @@ def density_histogram(trace_dict):
 
     return freq_x
 
-def get_merging_threshold(trace_dict):
+def get_merging_threshold(trace_dict, multiplier=1.5):
     """
     Get a reasonable threshold for merging given the traces and the maximum x,y and minimum x,y and 
     the number of traces
@@ -203,7 +265,7 @@ def get_merging_threshold(trace_dict):
     else:
         max_range = max_x - min_x
         min_range = max_y - min_y
-    return (max_range-min_range)/(len(trace_dict) + 1) # play around with this value 
+    return multiplier*(max_range-min_range)/(len(trace_dict) + 1) # play around with this value 
 
 def calculate_center_of_mass(points):
     """
@@ -285,14 +347,14 @@ def perform_segmentation(trace_dict):
     1. new_trace_dicts (list) - returns a list of newly formed traces group that will have the features extracted.
                                 This is a list of dictionaries with the key as a tuple of trace_ids and the value as the list of coordinates 
                                 representing their respective trace_id (it is a list of lists). 
-
-                                TODO: Is this really how we want to represent it? There must be a better way. 
-                                Return to this (list of list of tracegroups? idk)
     """
     intersecting_traces = determine_intersecting_traces(trace_dict)
     mergable_traces = determine_mergeable_traces(trace_dict)
+    # overlapping_traces = determine_overlapping_traces(trace_dict)
+    bounding_box_traces = determine_mergeable_bounding_boxes(trace_dict)
     
-    return list(set(intersecting_traces).union(mergable_traces)) # as of right now, using intersection does not work, using union instead
+    intersection_and_com = list(set(intersecting_traces).union(mergable_traces))
+    return list(set(intersection_and_com).union(bounding_box_traces))
 
 def merge_tuples(tups):
     """
@@ -303,7 +365,7 @@ def merge_tuples(tups):
     tups (list) - list of tuples
 
     Returns:
-    groups (set) - list of sets
+    groups (list) - list of sets
     """
     groups = [set(t) for t in tups]
     while True:
@@ -321,6 +383,40 @@ def merge_tuples(tups):
             break
     return groups
 
+
+def fixed_merged_groups(segmented_groups, trace_dict):
+    """
+    Redetermines groupings that have more than 4 traces
+
+    Parameters:
+    1. segmented_groups (list) - collections of trace_ids that are believed to belong together
+    2. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
+
+    Returns:
+    1. cleaned_groups (list) - groups of trace_ids that belong together
+    """
+    groups_greater_than_4 = [x for x in segmented_groups if len(x) > 4]
+    groups_less_than_4 = [x for x in segmented_groups if len(x) <= 4] 
+    current_threshold_multiplier = 1.4
+    while len(groups_greater_than_4) > 0: 
+        cleaned_groups = []
+        for group in groups_greater_than_4:
+            sub_group = []
+            for trace_id_1 in group:
+                for trace_id_2 in group:
+                    if trace_id_1 != trace_id_2: 
+                        t = get_merging_threshold(trace_dict, current_threshold_multiplier)
+                        p1 = trace_dict[trace_id_1]
+                        p2 = trace_dict[trace_id_2]
+                        if can_center_of_mass_of_traces_merge(p1, p2, t) or can_closest_traces_merge(p1, p2, t):
+                            sub_group.append((trace_id_1, trace_id_2))
+            cleaned_groups.extend(sub_group)
+        merged_cleaned_groups = merge_tuples(cleaned_groups)
+        groups_greater_than_4 = [g for g in merged_cleaned_groups if len(g) > 4] 
+        groups_less_than_4.extend([g for g in merged_cleaned_groups if len(g) <= 4])
+        current_threshold_multiplier -= 0.2
+    return groups_less_than_4
+
 def segment_trace_dicts(trace_dict):
     """
     Takes the results from the segmentation performed above and forms new trace_dicts based on the 
@@ -332,11 +428,11 @@ def segment_trace_dicts(trace_dict):
     Returns:
     1. trace_dicts (dicts) - list of newly segmented trace_dicts
     """
-    segmented_groups = perform_segmentation(trace_dict)
     trace_dicts = []
-    # remember that multiple trace ids can make up 1 symbol, and we want a trace_dict to represent a single symbol
-    segmented_groups = merge_tuples(segmented_groups)
+    merged_tuples = merge_tuples(perform_segmentation(trace_dict))
+    segmented_groups = fixed_merged_groups(merged_tuples, trace_dict)
     segmented_groups_set = set()
+    
     for group in segmented_groups:
         for trace_id in group:
             segmented_groups_set.add(trace_id)

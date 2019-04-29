@@ -235,26 +235,6 @@ def extract_covariance_between_x_y(trace_dict):
             cov += ((x_coors[i] - mean_x) * (y_coors[i] - mean_y))
     return (cov/n)
 
-def extract_num_intersecting_lines(trace_dict):
-    """
-    Calculate the number of intersecting traces
-
-    Parameters: 
-    trace_dict (dict: {int -> arr}) - dictionary of trace id to array of points
-
-    Returns:
-    num_intersections (int) - the number of intersections present in a symbol
-    """
-    num_intersections = 0
-    if len(trace_dict) == 1:
-        return num_intersections
-    for trace_1, points_1 in trace_dict.items():
-        for trace_2, points_2 in trace_dict.items():
-            if trace_1 != trace_2 and do_lines_intersect(points_1[0], points_2[0], points_1[-1], points_2[-1]):
-                num_intersections += 1
-    return num_intersections
-    
-
 def get_crossings_in_boundary(trace_dict, start_x, end_x, start_y, end_y, axis):
     """
     Takes 9 lines passing through a boundary aligned to a specified axis
@@ -408,11 +388,10 @@ def extract_features(trace_dict, unique_id, draw_input_data=False):
     aspect_ratio = extract_aspect_ratio(trace_dict)
     frequencies = extract_frequencies(trace_dict)
     crossings = extract_crossings(trace_dict)
-    num_intersecting_lines = extract_num_intersecting_lines(trace_dict)
 
     row = {'UI': unique_id, 'NUM_POINTS': num_points, 'NUM_STROKES': num_strokes, 'NUM_DIRECTIONS': len(directions), 
         'INITIAL_DIRECTION': initial_direction, 'END_DIRECTION': end_direction, 'CURVATURE': curvature,
-        'ASPECT_RATIO': aspect_ratio, 'COVARIANCE': covariance, 'NUM_INTERSECTING_LINES': num_intersecting_lines}
+        'ASPECT_RATIO': aspect_ratio, 'COVARIANCE': covariance}
 
     for i, f_x in enumerate(frequencies[0]):
         row['f_x_{0}'.format(i)] = f_x
