@@ -109,7 +109,11 @@ def classification_main():
                 df = load_files_to_dataframe(sys.argv[1], sys.argv[2]) # with ground truth files
             else:
                 df = load_files_to_dataframe(sys.argv[1]) # without ground truth files
-            x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI', 'TRACES']), axis=1) 
+            # Omitting these and the  since the model performs better without them
+            # for i in range(5):
+            #     df.drop(list(['c_x_{}'.format(i)]), axis=1, inplace=True)
+            #     df.drop(list(['c_y_{}'.format(i)]), axis=1, inplace=True)
+            x_train = df.drop(list(['SYMBOL_REPRESENTATION', 'UI', 'TRACES','COVARIANCE']), axis=1) 
             y_train = df['SYMBOL_REPRESENTATION']
             # x_train, _, y_train, _ = split_data(df)
             train_random_forest_classifier(x_train, y_train, 200)

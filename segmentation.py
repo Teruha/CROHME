@@ -10,9 +10,7 @@ from CROHME import test_random_forest_classifier, train_random_forest_classifier
 
 def determine_intersecting_traces(trace_dict):
     """
-    Determines if two line segments in a trace group intersect with each other, 
-    if they do, there's a good chance we have two tracegroups that represent a 
-    mathematical symbols requiring two strokes 
+    Determines if all the lines in a trace group that intersect with each other. 
 
     Parameters:
     1. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
@@ -232,8 +230,7 @@ def density_histogram(trace_dict):
 
 def get_merging_threshold(trace_dict, multiplier=1.5):
     """
-    Get a reasonable threshold for merging given the traces and the maximum x,y and minimum x,y and 
-    the number of traces
+    Calculate a reasonable threshold for merging given the traces in a group
 
     Parameters:
     1. min_x (list) - maximum x value of a trace_dict
@@ -283,8 +280,7 @@ def calculate_center_of_mass(points):
 
 def can_center_of_mass_of_traces_merge(points_1, points_2, threshold):
     """
-    Determine if two traces from the same trace group can be merged by calculating each trace's 
-    center of mass
+    Determine if two traces from the same trace group can be given center of mass
     
     Parameters:
     1. points_1 (list) - list of coordinates that represent the trace
@@ -353,8 +349,10 @@ def perform_segmentation(trace_dict):
     # overlapping_traces = determine_overlapping_traces(trace_dict)
     bounding_box_traces = determine_mergeable_bounding_boxes(trace_dict)
     
-    intersection_and_com = list(set(intersecting_traces).union(mergable_traces))
-    return list(set(intersection_and_com).union(bounding_box_traces))
+    # intersection_and_com = list(set(intersecting_traces).union(mergable_traces))
+    # return list(set(intersection_and_com).union(bounding_box_traces))
+    return bounding_box_traces
+    
 
 def merge_tuples(tups):
     """
@@ -393,7 +391,7 @@ def fixed_merged_groups(segmented_groups, trace_dict):
     2. trace_dict (dict: {int -> arr}) - dictionary of trace_ids to coordinates
 
     Returns:
-    1. cleaned_groups (list) - groups of trace_ids that belong together
+    1. groups_less_than_4 (list) - groups of trace_ids that belong together
     """
     groups_greater_than_4 = [x for x in segmented_groups if len(x) > 4]
     groups_less_than_4 = [x for x in segmented_groups if len(x) <= 4] 
@@ -419,8 +417,7 @@ def fixed_merged_groups(segmented_groups, trace_dict):
 
 def segment_trace_dicts(trace_dict):
     """
-    Takes the results from the segmentation performed above and forms new trace_dicts based on the 
-    traces calculated to belong together
+    Takes the results from the segmentation performed above and forms new trace groups
 
     Parameters:
     1. trace_dict (dict) - unsegmented traces  
@@ -481,7 +478,11 @@ def segmentation_main():
             train_random_forest_classifier(x_train, y_train, n_estimators=200)
         elif sys.argv[-1] == '-te': # test the model, this means it already exists
             df = load_files_to_dataframe(sys.argv[1], segment_data_func=segment_trace_dicts)
-            dropped_x_test = df.drop(list(['SYMBOL_REPRESENTATION', 'UI' ,'TRACES']), axis=1) # Keep this
+            # Omitting these and the  since the model performs better without them
+            # for i in range(5):
+            #     df.drop(list(['c_x_{}'.format(i)]), axis=1, inplace=True)
+            #     df.drop(list(['c_y_{}'.format(i)]), axis=1, inplace=True)
+            dropped_x_test = df.drop(list(['SYMBOL_REPRESENTATION', 'UI', 'TRACES','COVARIANCE']), axis=1) # Keep this
             y_test = df['SYMBOL_REPRESENTATION']
             predictions = test_random_forest_classifier(dropped_x_test, y_test, 200)
             create_lg_files(df, predictions)

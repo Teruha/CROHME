@@ -227,9 +227,10 @@ def build_training_data(symbol_files, junk_files=[], segment_data_func=None, pri
             df.loc[row_num] = list(row.values())
         percentage = num_files//100
         if print_progress and percentage != 0 and row_num % percentage == 0:
-            print('{0} ({1}%) of {2} files loaded...'.format(row_num, round((row_num/num_files)*100), num_files))
+            # print('{0} ({1}%) of {2} files loaded...'.format(row_num, round((row_num/num_files)*100), num_files))
+            print('File \'{}\' processed.'.format(data_file))
         row_num += 1
-    print('Files 100% loaded.')
+    print('All files loaded.')
     return df # use this to operate on the data
 
 def load_files_to_dataframe(dir_name, second_dir=None, segment_data_func=None, save=True):
@@ -261,8 +262,13 @@ def load_files_to_dataframe(dir_name, second_dir=None, segment_data_func=None, s
         if save:
             original_path = os.getcwd()
             abs_path = os.path.dirname(os.path.abspath(__file__))
-            file_directory = 'classification/data_files' if not segment_data_func else 'segmentation/data_files'
-            saved_pkl_file_path = os.path.join(abs_path, file_directory)
+            file_directory = 'classification' if not segment_data_func else 'segmentation'
+            full_file_directory = os.path.join(abs_path, file_directory)
+            if not os.path.isdir(full_file_directory):
+                os.mkdir(full_file_directory)
+            saved_pkl_file_path = os.path.join(full_file_directory, 'data_files')
+            if not os.path.isdir(saved_pkl_file_path):
+                os.mkdir(saved_pkl_file_path)
             os.chdir(saved_pkl_file_path)
             df.to_pickle(dir_name + '.pkl')
             os.chdir(original_path)
